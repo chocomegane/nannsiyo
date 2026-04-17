@@ -1,0 +1,25 @@
+services:
+  app:
+    build: .
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Phase 3 以降: バックエンドAPIを追加する場合はここに追記
+  # api:
+  #   build: ./server
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - DATABASE_URL=/data/game.db
+  #   volumes:
+  #     - db_data:/data
+  #   restart: unless-stopped
+
+# volumes:
+#   db_data:

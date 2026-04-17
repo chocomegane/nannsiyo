@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DB設計書 — ペット育成ゲーム</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f6fa; color: #2d2d2d; }
+
+  header {
+    background: linear-gradient(135deg, #11998e, #38ef7d);
+    color: white; padding: 32px 40px;
+  }
+  header h1 { font-size: 28px; font-weight: 700; }
+  header p  { margin-top: 6px; opacity: 0.85; font-size: 14px; }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+  h2 { font-size: 20px; font-weight: 700; margin-bottom: 16px; padding-bottom: 8px;
+       border-bottom: 2px solid #e0e0e0; color: #333; }
+
+  section { margin-bottom: 52px; }
+
+  /* テーブルカード */
+  .table-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  .tbl-card {
+    background: white; border-radius: 12px; overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+  }
+  .tbl-card-header {
+    padding: 12px 18px;
+    color: white; font-weight: 700; font-size: 15px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tbl-card table { width: 100%; border-collapse: collapse; }
+  .tbl-card th {
+    background: #f8f9fa; text-align: left;
+    padding: 7px 14px; font-size: 12px; color: #888;
+    border-bottom: 1px solid #eee;
+  }
+  .tbl-card td { padding: 7px 14px; font-size: 13px; border-bottom: 1px solid #f0f0f0; }
+  .tbl-card tr:last-child td { border-bottom: none; }
+
+  code { background: #f0f0f0; padding: 1px 5px; border-radius: 4px; font-size: 12px; font-family: monospace; }
+  .pk  { background: #fff3cd; color: #856404; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+  .fk  { background: #d1ecf1; color: #0c5460; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+  .idx { background: #d4edda; color: #155724; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+
+  /* ER図 */
+  .er-wrap {
+    background: white; border-radius: 12px; padding: 32px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08); overflow-x: auto;
+  }
+  .er {
+    display: grid;
+    grid-template-areas:
+      ".       players  ."
+      "pets    .        sell_history"
+      ".       inventory .";
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    min-width: 600px;
+    align-items: center;
+  }
+  .er-box {
+    border: 2px solid #ccc; border-radius: 10px; overflow: hidden;
+    font-size: 13px;
+  }
+  .er-box-title {
+    padding: 8px 14px; font-weight: bold; font-size: 14px; color: white;
+  }
+  .er-box ul { list-style: none; padding: 8px 14px 10px; }
+  .er-box li { padding: 2px 0; color: #444; }
+  .er-box li.pk-row { font-weight: bold; color: #856404; }
+  .er-box li.fk-row { color: #0c5460; }
+
+  .er-players      { grid-area: players; }
+  .er-pets         { grid-area: pets; }
+  .er-inventory    { grid-area: inventory; }
+  .er-sell-history { grid-area: sell_history; }
+
+  /* SQLブロック */
+  pre {
+    background: #1e1e2e; color: #cdd6f4; border-radius: 10px;
+    padding: 20px 24px; font-size: 13px; line-height: 1.7;
+    overflow-x: auto; box-shadow: 0 2px 10px rgba(0,0,0,.15);
+  }
+  .kw { color: #89b4fa; }
+  .ty { color: #a6e3a1; }
+  .cm { color: #6c7086; font-style: italic; }
+  .st { color: #f9e2af; }
+
+  /* フェーズ対応表 */
+  table.phase { width: 100%; border-collapse: collapse; background: white;
+    border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+  table.phase th { background: #11998e; color: white; padding: 10px 14px; font-size: 13px; text-align: left; }
+  table.phase td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid #eee; }
+  table.phase tr:last-child td { border-bottom: none; }
+  .dot-yes { color: #11998e; font-weight: bold; }
+  .dot-no  { color: #ccc; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🗄️ DB設計書 — ペット育成ゲーム</h1>
+  <p>DB: SQLite / 対象: セーブデータ永続化・マルチプレイ・ランキング履歴</p>
+</header>
+
+<div class="container">
+
+  <!-- 1. テーブル一覧 -->
+  <section>
+    <h2>1. テーブル一覧</h2>
+    <div class="table-grid">
+
+      <!-- players -->
+      <div class="tbl-card">
+        <div class="tbl-card-header" style="background:#667eea;">👤 players</div>
+        <table>
+          <thead><tr><th>カラム</th><th>型</th><th>制約</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pk">PK</span> id</td><td><code>TEXT</code></td><td>NOT NULL</td><td>UUID</td></tr>
+            <tr><td>name</td><td><code>TEXT</code></td><td>NOT NULL</td><td>プレイヤー名</td></tr>
+            <tr><td>money</td><td><code>INTEGER</code></td><td>DEFAULT 0</td><td>所持金</td></tr>
+            <tr><td>created_at</td><td><code>TEXT</code></td><td>NOT NULL</td><td>ISO8601</td></tr>
+            <tr><td>updated_at</td><td><code>TEXT</code></td><td>NOT NULL</td><td>ISO8601</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- pets -->
+      <div class="tbl-card">
+        <div class="tbl-card-header" style="background:#f093fb;">🐉 pets</div>
+        <table>
+          <thead><tr><th>カラム</th><th>型</th><th>制約</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pk">PK</span> id</td><td><code>TEXT</code></td><td>NOT NULL</td><td>UUID</td></tr>
+            <tr><td><span class="fk">FK</span> player_id</td><td><code>TEXT</code></td><td>NOT NULL</td><td>→ players.id</td></tr>
+            <tr><td>name</td><td><code>TEXT</code></td><td>NOT NULL</td><td>ペット名</td></tr>
+            <tr><td>species</td><td><code>TEXT</code></td><td>NOT NULL</td><td>dragon/unicorn/slime</td></tr>
+            <tr><td>level</td><td><code>INTEGER</code></td><td>DEFAULT 1</td><td>レベル</td></tr>
+            <tr><td>happiness</td><td><code>INTEGER</code></td><td>DEFAULT 80</td><td>0〜100</td></tr>
+            <tr><td>hunger</td><td><code>INTEGER</code></td><td>DEFAULT 60</td><td>0〜100</td></tr>
+            <tr><td>created_at</td><td><code>TEXT</code></td><td>NOT NULL</td><td>ISO8601</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- inventory -->
+      <div class="tbl-card">
+        <div class="tbl-card-header" style="background:#4facfe;">📦 inventory</div>
+        <table>
+          <thead><tr><th>カラム</th><th>型</th><th>制約</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pk">PK</span> id</td><td><code>TEXT</code></td><td>NOT NULL</td><td>UUID</td></tr>
+            <tr><td><span class="fk">FK</span> player_id</td><td><code>TEXT</code></td><td>NOT NULL</td><td>→ players.id</td></tr>
+            <tr><td>item_id</td><td><code>TEXT</code></td><td>NOT NULL</td><td>アイテムマスターID</td></tr>
+            <tr><td>name</td><td><code>TEXT</code></td><td>NOT NULL</td><td>アイテム名（スナップショット）</td></tr>
+            <tr><td>sell_price</td><td><code>INTEGER</code></td><td>NOT NULL</td><td>売値</td></tr>
+            <tr><td>obtained_at</td><td><code>TEXT</code></td><td>NOT NULL</td><td>回収日時</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- sell_history -->
+      <div class="tbl-card">
+        <div class="tbl-card-header" style="background:#11998e;">💰 sell_history</div>
+        <table>
+          <thead><tr><th>カラム</th><th>型</th><th>制約</th><th>説明</th></tr></thead>
+          <tbody>
+            <tr><td><span class="pk">PK</span> id</td><td><code>TEXT</code></td><td>NOT NULL</td><td>UUID</td></tr>
+            <tr><td><span class="fk">FK</span> player_id</td><td><code>TEXT</code></td><td>NOT NULL</td><td>→ players.id</td></tr>
+            <tr><td>total_amount</td><td><code>INTEGER</code></td><td>NOT NULL</td><td>売却合計金額</td></tr>
+            <tr><td>item_count</td><td><code>INTEGER</code></td><td>NOT NULL</td><td>売却件数</td></tr>
+            <tr><td>sold_at</td><td><code>TEXT</code></td><td>NOT NULL</td><td>売却日時</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 2. ER図 -->
+  <section>
+    <h2>2. ER図</h2>
+    <div class="er-wrap">
+      <div class="er">
+        <div class="er-box er-players" style="border-color:#667eea;">
+          <div class="er-box-title" style="background:#667eea;">👤 players</div>
+          <ul>
+            <li class="pk-row">🔑 id (PK)</li>
+            <li>name</li>
+            <li>money</li>
+            <li>created_at</li>
+            <li>updated_at</li>
+          </ul>
+        </div>
+        <div class="er-box er-pets" style="border-color:#f093fb;">
+          <div class="er-box-title" style="background:#f093fb;">🐉 pets</div>
+          <ul>
+            <li class="pk-row">🔑 id (PK)</li>
+            <li class="fk-row">🔗 player_id (FK)</li>
+            <li>name / species / level</li>
+            <li>happiness / hunger</li>
+            <li>created_at</li>
+          </ul>
+        </div>
+        <div class="er-box er-sell-history" style="border-color:#11998e;">
+          <div class="er-box-title" style="background:#11998e;">💰 sell_history</div>
+          <ul>
+            <li class="pk-row">🔑 id (PK)</li>
+            <li class="fk-row">🔗 player_id (FK)</li>
+            <li>total_amount</li>
+            <li>item_count</li>
+            <li>sold_at</li>
+          </ul>
+        </div>
+        <div class="er-box er-inventory" style="border-color:#4facfe;">
+          <div class="er-box-title" style="background:#4facfe;">📦 inventory</div>
+          <ul>
+            <li class="pk-row">🔑 id (PK)</li>
+            <li class="fk-row">🔗 player_id (FK)</li>
+            <li>item_id / name</li>
+            <li>sell_price</li>
+            <li>obtained_at</li>
+          </ul>
+        </div>
+      </div>
+      <p style="text-align:center;margin-top:20px;font-size:12px;color:#999;">
+        players 1 ─── ∞ pets &nbsp;|&nbsp; players 1 ─── ∞ inventory &nbsp;|&nbsp; players 1 ─── ∞ sell_history
+      </p>
+    </div>
+  </section>
+
+  <!-- 3. DDL -->
+  <section>
+    <h2>3. CREATE TABLE (SQLite)</h2>
+<pre><span class="cm">-- players</span>
+<span class="kw">CREATE TABLE</span> players (
+  id         <span class="ty">TEXT</span>    <span class="kw">PRIMARY KEY</span>,
+  name       <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>,
+  money      <span class="ty">INTEGER</span> <span class="kw">NOT NULL DEFAULT</span> <span class="st">0</span>,
+  created_at <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>,
+  updated_at <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>
+);
+
+<span class="cm">-- pets</span>
+<span class="kw">CREATE TABLE</span> pets (
+  id         <span class="ty">TEXT</span>    <span class="kw">PRIMARY KEY</span>,
+  player_id  <span class="ty">TEXT</span>    <span class="kw">NOT NULL REFERENCES</span> players(id),
+  name       <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>,
+  species    <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>,
+  level      <span class="ty">INTEGER</span> <span class="kw">NOT NULL DEFAULT</span> <span class="st">1</span>,
+  happiness  <span class="ty">INTEGER</span> <span class="kw">NOT NULL DEFAULT</span> <span class="st">80</span>,
+  hunger     <span class="ty">INTEGER</span> <span class="kw">NOT NULL DEFAULT</span> <span class="st">60</span>,
+  created_at <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>
+);
+
+<span class="cm">-- inventory</span>
+<span class="kw">CREATE TABLE</span> inventory (
+  id          <span class="ty">TEXT</span>    <span class="kw">PRIMARY KEY</span>,
+  player_id   <span class="ty">TEXT</span>    <span class="kw">NOT NULL REFERENCES</span> players(id),
+  item_id     <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>,
+  name        <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>,
+  sell_price  <span class="ty">INTEGER</span> <span class="kw">NOT NULL</span>,
+  obtained_at <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>
+);
+
+<span class="cm">-- sell_history</span>
+<span class="kw">CREATE TABLE</span> sell_history (
+  id           <span class="ty">TEXT</span>    <span class="kw">PRIMARY KEY</span>,
+  player_id    <span class="ty">TEXT</span>    <span class="kw">NOT NULL REFERENCES</span> players(id),
+  total_amount <span class="ty">INTEGER</span> <span class="kw">NOT NULL</span>,
+  item_count   <span class="ty">INTEGER</span> <span class="kw">NOT NULL</span>,
+  sold_at      <span class="ty">TEXT</span>    <span class="kw">NOT NULL</span>
+);
+
+<span class="cm">-- インデックス</span>
+<span class="kw">CREATE INDEX</span> idx_pets_player       <span class="kw">ON</span> pets(player_id);
+<span class="kw">CREATE INDEX</span> idx_inventory_player  <span class="kw">ON</span> inventory(player_id);
+<span class="kw">CREATE INDEX</span> idx_sell_history_player <span class="kw">ON</span> sell_history(player_id);
+<span class="cm">-- ランキング用</span>
+<span class="kw">CREATE INDEX</span> idx_players_money     <span class="kw">ON</span> players(money <span class="kw">DESC</span>);</pre>
+  </section>
+
+  <!-- 4. フェーズ対応表 -->
+  <section>
+    <h2>4. フェーズ別利用テーブル</h2>
+    <table class="phase">
+      <thead>
+        <tr><th>テーブル</th><th>Phase 1 MVP</th><th>Phase 3 マルチ</th><th>ランキング</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>players</td><td class="dot-yes">✔ 使用</td><td class="dot-yes">✔ 使用</td><td class="dot-yes">✔ 使用</td></tr>
+        <tr><td>pets</td><td class="dot-yes">✔ 使用</td><td class="dot-yes">✔ 使用</td><td class="dot-no">— 不要</td></tr>
+        <tr><td>inventory</td><td class="dot-yes">✔ 使用</td><td class="dot-yes">✔ 使用</td><td class="dot-no">— 不要</td></tr>
+        <tr><td>sell_history</td><td class="dot-no">— 任意</td><td class="dot-yes">✔ 使用</td><td class="dot-yes">✔ 使用</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+</div>
+</body>
+</html>
