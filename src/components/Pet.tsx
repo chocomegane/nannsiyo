@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Pet as PetType } from '../types'
+import type { Pet as PetType } from '../types'
 
 const SPECIES_EMOJI: Record<PetType['species'], string> = {
   dragon: '🐉',

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { DroppedItem as DroppedItemType } from '../types'
+import type { DroppedItem as DroppedItemType } from '../types'
 
 interface Props {
   item: DroppedItemType

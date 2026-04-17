@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { Pet } from '../types'
+import type { Pet } from '../types'
 
 interface PetState {
   pet: Pet

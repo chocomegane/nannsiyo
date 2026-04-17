@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { DroppedItem } from '../types'
+import type { DroppedItem } from '../types'
 
 interface PlayerState {
   playerName: string

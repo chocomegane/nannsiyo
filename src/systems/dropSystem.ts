@@ -1,4 +1,4 @@
-import { Pet, DroppedItem } from '../types'
+import type { Pet, DroppedItem } from '../types'
 import { DROP_TABLE, weightedRandom } from '../data/items'
 
 const BASE_MIN = 30_000
