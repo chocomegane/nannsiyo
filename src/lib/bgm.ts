@@ -2,12 +2,16 @@ import type { Scene } from '../types'
 
 export interface BgmTrack { label: string; src: string }
 
+function bgmPath(filename: string) {
+  return '/bgm/' + filename.split('').map((c) => encodeURIComponent(c)).join('').replace(/%2F/g, '/')
+}
+
 export const BGM_TRACKS: BgmTrack[] = [
-  { label: '夜のさんぽみち',            src: '/bgm/桜餅ルナ - 夜のさんぽみち.mp3' },
-  { label: 'さみしいおばけと東京の月',  src: '/bgm/さみしいおばけと東京の月_しゃろう.mp3' },
-  { label: 'しゅわしゅわハニーレモン', src: '/bgm/しゅわしゅわハニーレモン350ml_しゃろう.mp3' },
-  { label: 'Anyone in 2025',            src: '/bgm/Anyone_in_2025(LOOP)_しゃろう.mp3' },
-  { label: '宇宙飛行士が最後に見たもの', src: '/bgm/宇宙飛行士が最後に見たもの_しゃろう.mp3' },
+  { label: '夜のさんぽみち',            src: bgmPath('桜餅ルナ - 夜のさんぽみち.mp3') },
+  { label: 'さみしいおばけと東京の月',  src: bgmPath('さみしいおばけと東京の月_しゃろう.mp3') },
+  { label: 'しゅわしゅわハニーレモン', src: bgmPath('しゅわしゅわハニーレモン350ml_しゃろう.mp3') },
+  { label: 'Anyone in 2025',            src: bgmPath('Anyone_in_2025(LOOP)_しゃろう.mp3') },
+  { label: '宇宙飛行士が最後に見たもの', src: bgmPath('宇宙飛行士が最後に見たもの_しゃろう.mp3') },
 ]
 
 export const DEFAULT_SCENE_BGM: Partial<Record<Scene, string>> = {
@@ -50,17 +54,30 @@ class BgmManager {
     this.playUrl(src)
   }
 
+  private pendingSrc = ''
+
   private playUrl(src: string) {
     this.stop()
     this.currentSrc = src
-    this.audio = new Audio(src)
-    this.audio.loop = true
-    this.audio.volume = this.volume
-    this.audio.muted = this.muted
-    this.audio.addEventListener('ended', () => {
+    this.pendingSrc = src
+    const audio = new Audio(src)
+    audio.loop = true
+    audio.volume = this.volume
+    audio.muted = this.muted
+    audio.addEventListener('ended', () => {
       if (this.audio) { this.audio.currentTime = 0; this.audio.play().catch(() => {}) }
     })
-    this.audio.play().catch(() => {})
+    this.audio = audio
+    audio.play().catch(() => {
+      // 自動再生ブロック時: 次回ユーザー操作で再生
+      const resume = () => {
+        if (this.pendingSrc === src && !this.muted) audio.play().catch(() => {})
+        document.removeEventListener('click', resume)
+        document.removeEventListener('keydown', resume)
+      }
+      document.addEventListener('click', resume, { once: true })
+      document.addEventListener('keydown', resume, { once: true })
+    })
   }
 
   stop() {
