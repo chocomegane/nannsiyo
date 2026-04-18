@@ -36,7 +36,7 @@ export default function AccountMenu({ playerId, onLogout }: Props) {
   }
 
   return (
-    <div className="relative">
+    <div className="relative z-[200]">
       <button
         onClick={() => setOpen((o) => !o)}
         className="bg-white/90 rounded-2xl px-4 py-2 shadow-lg font-bold text-sm text-gray-700 hover:bg-white transition-colors flex items-center gap-1"
@@ -45,7 +45,7 @@ export default function AccountMenu({ playerId, onLogout }: Props) {
       </button>
 
       {open && (
-        <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl z-20 w-64 overflow-hidden">
+        <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl z-[200] w-64 overflow-hidden">
           {view === 'menu' && (
             <div className="p-3 flex flex-col gap-1">
               <button onClick={() => setView('info')}
