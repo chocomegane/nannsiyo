@@ -1,12 +1,47 @@
+export type Species = 'dragon' | 'unicorn' | 'slime' | 'phoenix' | 'golem'
+
+export type SkillCategory = 'attack' | 'expression' | 'party' | 'item' | 'move' | 'support' | 'transform'
+
+export interface Skill {
+  id: string
+  name: string
+  category: SkillCategory
+  unlockLevel: number
+  description: string
+}
+
+export interface FoodItem {
+  id: string
+  foodId: string
+  name: string
+  price: number
+}
+
+export interface FoodEffect {
+  happinessDelta: number
+  hungerDelta: number
+  colorEffect?: string
+  sizeEffect?: number
+  glowEffect?: boolean
+  duration?: number
+}
+
 export interface Pet {
   id: string
   name: string
-  species: 'dragon' | 'unicorn' | 'slime'
+  species: Species
   level: number
+  exp: number
   stats: {
     happiness: number
     hunger: number
   }
+  appearance: {
+    colorFilter: string
+    scale: number
+    glow: boolean
+  }
+  unlockedSkills: string[]
 }
 
 export interface DroppedItem {
@@ -22,3 +57,5 @@ export interface Player {
   money: number
   inventory: DroppedItem[]
 }
+
+export type Scene = 'room' | 'park' | 'dungeon' | 'lottery' | 'ranking'
