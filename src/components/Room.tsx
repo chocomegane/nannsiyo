@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
 import { useAchievementStore } from '../store/achievementStore'
+import { usePlayerId } from '../lib/playerContext'
 import { startDropLoop } from '../systems/dropSystem'
 import { ACHIEVEMENTS } from '../data/achievements'
 import type { Skill } from '../types'
@@ -15,8 +16,10 @@ import SkillPanel from './SkillPanel'
 import LevelUpEffect from './LevelUpEffect'
 import SkillEffect from './SkillEffect'
 import Teleport from './Teleport'
+import AccountMenu from './AccountMenu'
 
 export default function Room() {
+  const { playerId, logout } = usePlayerId()
   const pet = usePetStore((s) => s.pet)
   const levelUpPending = usePetStore((s) => s.levelUpPending)
   const clearLevelUpPending = usePetStore((s) => s.clearLevelUpPending)
@@ -64,7 +67,10 @@ export default function Room() {
     >
       {/* 右上: 所持金・スキル・食事 */}
       <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
-        <MoneyDisplay />
+        <div className="flex gap-2 items-center">
+          <MoneyDisplay />
+          <AccountMenu playerId={playerId} onLogout={logout} />
+        </div>
         <div className="flex gap-2">
           <FoodMenu />
           <SkillPanel onUseSkill={setActiveSkill} />

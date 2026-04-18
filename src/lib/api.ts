@@ -18,6 +18,15 @@ export async function login(name: string, password: string): Promise<{ id: strin
   return res.json()
 }
 
+export async function changePassword(playerId: string, currentPassword: string, newPassword: string): Promise<{ ok: boolean } | { error: string }> {
+  const res = await fetch(`${BASE}/api/auth/password`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playerId, currentPassword, newPassword }),
+  })
+  return res.json()
+}
+
 export async function loadState(playerId: string) {
   const res = await fetch(`${BASE}/api/players/${playerId}/state`)
   if (!res.ok) return null

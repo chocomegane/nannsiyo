@@ -40,4 +40,23 @@ router.post('/login', (req, res) => {
   res.json({ id: player.id, name: player.name, money: player.money })
 })
 
+router.patch('/password', (req, res) => {
+  const { playerId, currentPassword, newPassword } = req.body as { playerId: string; currentPassword: string; newPassword: string }
+  if (!playerId || !currentPassword || !newPassword) { res.status(400).json({ error: '入力が不足しています' }); return }
+  if (newPassword.length < 4) { res.status(400).json({ error: 'パスワードは4文字以上にしてください' }); return }
+
+  const player = db.prepare('SELECT * FROM players WHERE id = ?').get(playerId) as
+    { id: string; password_hash: string; salt: string } | undefined
+  if (!player) { res.status(404).json({ error: 'プレイヤーが見つかりません' }); return }
+
+  if (hashPassword(currentPassword, player.salt) !== player.password_hash) {
+    res.status(401).json({ error: '現在のパスワードが違います' }); return
+  }
+
+  const newSalt = randomBytes(8).toString('hex')
+  const newHash = hashPassword(newPassword, newSalt)
+  db.prepare('UPDATE players SET password_hash = ?, salt = ? WHERE id = ?').run(newHash, newSalt, playerId)
+  res.json({ ok: true })
+})
+
 export default router

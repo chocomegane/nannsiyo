@@ -4,6 +4,7 @@ import { useWorldStore } from './store/worldStore'
 import { usePetStore } from './store/petStore'
 import { usePlayerStore } from './store/playerStore'
 import { loadState, saveState } from './lib/api'
+import { PlayerIdContext } from './lib/playerContext'
 import LoginScreen from './components/LoginScreen'
 import Room from './components/Room'
 import Park from './components/Park'
@@ -23,7 +24,6 @@ export default function App() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [initializing, setInitializing] = useState(true)
 
-  // 起動時: 保存済みセッションがあればDBからロード
   useEffect(() => {
     async function init() {
       const savedId = localStorage.getItem(PLAYER_ID_KEY)
@@ -42,7 +42,6 @@ export default function App() {
     init()
   }, [])
 
-  // ストア変更を監視して2秒デバウンスで保存
   useEffect(() => {
     if (!loggedIn) return
     const unsubPet = usePetStore.subscribe(() => scheduleSave())
@@ -56,12 +55,7 @@ export default function App() {
     saveTimer.current = setTimeout(() => {
       const pet = usePetStore.getState().pet
       const { playerName, money, inventory, foodInventory } = usePlayerStore.getState()
-      saveState(playerIdRef.current!, {
-        player: { name: playerName, money },
-        pet,
-        inventory,
-        foodInventory,
-      })
+      saveState(playerIdRef.current!, { player: { name: playerName, money }, pet, inventory, foodInventory })
     }, 2000)
   }
 
@@ -69,12 +63,20 @@ export default function App() {
     localStorage.setItem(PLAYER_ID_KEY, playerId)
     playerIdRef.current = playerId
     const data = await loadState(playerId)
-    if (data) {
-      applyState(data)
-    } else {
-      usePlayerStore.setState({ playerName })
-    }
+    if (data) { applyState(data) } else { usePlayerStore.setState({ playerName }) }
     setLoggedIn(true)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem(PLAYER_ID_KEY)
+    playerIdRef.current = null
+    usePetStore.setState({
+      pet: { id: 'pet-1', name: 'ドラゴン', species: 'dragon', level: 1, exp: 0,
+        stats: { happiness: 80, hunger: 60 }, appearance: { colorFilter: 'none', scale: 1, glow: false }, unlockedSkills: [] },
+    })
+    usePlayerStore.setState({ playerName: 'プレイヤー1', money: 0, inventory: [], droppedItems: [], foodInventory: [] })
+    useWorldStore.setState({ scene: 'room' })
+    setLoggedIn(false)
   }
 
   if (initializing) {
@@ -86,23 +88,23 @@ export default function App() {
     )
   }
 
-  if (!loggedIn) {
-    return <LoginScreen onSuccess={handleLoginSuccess} />
-  }
+  if (!loggedIn) return <LoginScreen onSuccess={handleLoginSuccess} />
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={scene}
-        className="w-full h-screen"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        <SceneComponent />
-      </motion.div>
-    </AnimatePresence>
+    <PlayerIdContext.Provider value={{ playerId: playerIdRef.current ?? '', logout: handleLogout }}>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={scene}
+          className="w-full h-screen"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <SceneComponent />
+        </motion.div>
+      </AnimatePresence>
+    </PlayerIdContext.Provider>
   )
 }
 
@@ -113,38 +115,18 @@ function applyState(data: {
   foodInventory: { id: string; food_id: string; name: string; price: number }[]
 }) {
   const { player, pet, inventory, foodInventory } = data
-
   usePlayerStore.setState({
     playerName: player.name,
     money: player.money,
-    inventory: inventory.map((i) => ({
-      id: i.id,
-      itemId: i.item_id,
-      name: i.name,
-      sellPrice: i.sell_price,
-      x: 10 + Math.random() * 75,
-      y: 52 + Math.random() * 33,
-    })),
-    foodInventory: foodInventory.map((f) => ({
-      id: f.id,
-      foodId: f.food_id,
-      name: f.name,
-      price: f.price,
-    })),
+    inventory: inventory.map((i) => ({ id: i.id, itemId: i.item_id, name: i.name, sellPrice: i.sell_price, x: 10 + Math.random() * 75, y: 52 + Math.random() * 33 })),
+    foodInventory: foodInventory.map((f) => ({ id: f.id, foodId: f.food_id, name: f.name, price: f.price })),
   })
-
   if (pet) {
     usePetStore.setState({
-      pet: {
-        id: pet.id,
-        name: pet.name,
-        species: pet.species as never,
-        level: pet.level,
-        exp: pet.exp,
+      pet: { id: pet.id, name: pet.name, species: pet.species as never, level: pet.level, exp: pet.exp,
         stats: { happiness: pet.happiness, hunger: pet.hunger },
         appearance: { colorFilter: 'none', scale: 1, glow: false },
-        unlockedSkills: JSON.parse(pet.unlocked_skills ?? '[]'),
-      },
+        unlockedSkills: JSON.parse(pet.unlocked_skills ?? '[]') },
     })
   }
 }
