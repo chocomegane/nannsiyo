@@ -89,6 +89,7 @@ export default function App() {
   const handleLogout = () => {
     localStorage.removeItem(PLAYER_ID_KEY)
     playerIdRef.current = null
+    if (saveTimer.current) { clearTimeout(saveTimer.current); saveTimer.current = null }
     usePetStore.setState({
       pet: { id: 'pet-1', name: 'ドラゴン', species: 'dragon', level: 1, exp: 0,
         stats: { happiness: 80, hunger: 60 }, appearance: { colorFilter: 'none', scale: 1, glow: false }, unlockedSkills: [], eatCount: {} },
