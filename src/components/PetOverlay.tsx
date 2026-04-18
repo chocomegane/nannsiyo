@@ -69,18 +69,20 @@ export default function PetOverlay() {
 
   return (
     <div className="absolute inset-0 pointer-events-none z-20">
-      {onlinePlayers.map((p) => (
+      {onlinePlayers.map((p) => {
+        const displayY = Math.max(55, Math.min(85, p.y))
+        return (
         <motion.div
           key={p.id}
           className="absolute flex flex-col items-center select-none"
-          animate={{ left: `${p.x}%`, top: `${p.y}%` }}
+          animate={{ left: `${p.x}%`, top: `${displayY}%` }}
           transition={{ type: 'spring', stiffness: 80, damping: 20 }}
           style={{ transform: 'translate(-50%, -50%)' }}
         >
           {chatBubbles.has(p.id) && (
-            <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white rounded-2xl px-3 py-1 shadow text-xs text-gray-700 whitespace-nowrap max-w-[140px] truncate border border-gray-100 pointer-events-none">
+            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-2xl px-3 py-1 shadow text-xs text-gray-700 whitespace-nowrap max-w-[140px] truncate border border-gray-100 pointer-events-none">
               {chatBubbles.get(p.id)}
-              <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b border-r border-gray-100 rotate-45" />
+              <div className="absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b border-r border-gray-100 rotate-45 -mt-1.5" />
             </div>
           )}
           <motion.span
@@ -90,7 +92,8 @@ export default function PetOverlay() {
           >{p.petEmoji}</motion.span>
           <span className="text-[10px] text-white bg-black/40 rounded-full px-2 py-0.5 mt-0.5 whitespace-nowrap">{p.name}</span>
         </motion.div>
-      ))}
+        )
+      })}
 
       <div className="absolute top-4 left-4 pointer-events-auto">
         <BgmPlayer />
