@@ -49,6 +49,7 @@ export default function Park() {
         id: parkSocket.id,
         name: playerName,
         petEmoji,
+        scene: 'park',
       })
     }
 

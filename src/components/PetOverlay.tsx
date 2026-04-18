@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { parkSocket } from '../lib/socket'
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
+import { useWorldStore } from '../store/worldStore'
 import BgmPlayer from './BgmPlayer'
 
 const SPECIES_EMOJI: Record<string, string> = {
@@ -14,6 +15,7 @@ interface OnlinePlayer { id: string; name: string; petEmoji: string; x: number; 
 export default function PetOverlay() {
   const pet = usePetStore((s) => s.pet)
   const playerName = usePlayerStore((s) => s.playerName)
+  const scene = useWorldStore((s) => s.scene)
   const [players, setPlayers] = useState<OnlinePlayer[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatBubbles, setChatBubbles] = useState<Map<string, string>>(new Map())
@@ -22,7 +24,7 @@ export default function PetOverlay() {
     const petEmoji = SPECIES_EMOJI[pet.species] ?? '🐾'
 
     const onConnect = () => {
-      parkSocket.emit('join', { id: parkSocket.id, name: playerName, petEmoji })
+      parkSocket.emit('join', { id: parkSocket.id, name: playerName, petEmoji, scene })
     }
 
     parkSocket.on('connect', onConnect)
@@ -60,7 +62,7 @@ export default function PetOverlay() {
       parkSocket.disconnect()
       setPlayers([])
     }
-  }, [pet.species, playerName])
+  }, [pet.species, playerName, scene])
 
   const sendChat = () => {
     if (!chatInput.trim()) return
