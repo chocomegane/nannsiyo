@@ -1,5 +1,6 @@
 import type { Pet, DroppedItem } from '../types'
 import { DROP_TABLE, weightedRandom } from '../data/items'
+import { generateId } from '../lib/uuid'
 
 const BASE_MIN = 5_000
 const BASE_MAX = 10_000
@@ -27,7 +28,7 @@ export function startDropLoop(
       if (table) {
         const entry = weightedRandom(table)
         const item: DroppedItem = {
-          id: crypto.randomUUID(),
+          id: generateId(),
           itemId: entry.itemId,
           name: entry.name,
           sellPrice: entry.sellPrice,

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { DroppedItem, FoodItem } from '../types'
 import { FOOD_TABLE } from '../data/foods'
 import { usePetStore } from './petStore'
+import { generateId } from '../lib/uuid'
 
 interface PlayerState {
   playerName: string
@@ -51,7 +52,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const { money } = get()
     if (money < food.price) return false
     const newItem: FoodItem = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       foodId: food.foodId,
       name: food.name,
       price: food.price,
