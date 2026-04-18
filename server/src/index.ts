@@ -21,7 +21,7 @@ app.use(express.json())
 app.use('/api/players', playersRouter)
 app.use('/api/ranking', rankingRouter)
 app.use('/api/events', eventsRouter)
-app.get('/health', (_req, res) => res.json({ ok: true }))
+app.get('/health', (_req: import('express').Request, res: import('express').Response) => res.json({ ok: true }))
 
 registerParkHandlers(io)
 registerDungeonHandlers(io)
