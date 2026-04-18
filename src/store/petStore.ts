@@ -25,6 +25,7 @@ export const usePetStore = create<PetState>((set) => ({
     stats: { happiness: 80, hunger: 60 },
     appearance: { colorFilter: 'none', scale: 1, glow: false },
     unlockedSkills: [],
+    eatCount: {},
   },
   levelUpPending: false,
 
@@ -45,6 +46,7 @@ export const usePetStore = create<PetState>((set) => ({
           }))
         }, duration)
       }
+      const newEatCount = { ...state.pet.eatCount, [foodId]: (state.pet.eatCount[foodId] ?? 0) + 1 }
       return {
         pet: {
           ...state.pet,
@@ -53,6 +55,7 @@ export const usePetStore = create<PetState>((set) => ({
             hunger: clamp(state.pet.stats.hunger + hungerDelta),
           },
           appearance: newAppearance,
+          eatCount: newEatCount,
         },
       }
     }),

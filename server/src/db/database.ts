@@ -15,5 +15,6 @@ db.exec(schema)
 try { db.exec("ALTER TABLE pets ADD COLUMN unlocked_skills TEXT NOT NULL DEFAULT '[]'") } catch {}
 try { db.exec("ALTER TABLE players ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''") } catch {}
 try { db.exec("ALTER TABLE players ADD COLUMN salt TEXT NOT NULL DEFAULT ''") } catch {}
+try { db.exec("ALTER TABLE pets ADD COLUMN eat_count TEXT NOT NULL DEFAULT '{}'") } catch {}
 
 export default db

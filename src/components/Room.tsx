@@ -17,6 +17,7 @@ import LevelUpEffect from './LevelUpEffect'
 import SkillEffect from './SkillEffect'
 import Teleport from './Teleport'
 import AccountMenu from './AccountMenu'
+import RoomDecorations from './RoomDecorations'
 
 export default function Room() {
   const { playerId, logout } = usePlayerId()
@@ -93,6 +94,8 @@ export default function Room() {
           <DroppedItem key={item.id} item={item} onCollect={handleCollect} />
         ))}
       </AnimatePresence>
+
+      <RoomDecorations />
 
       {/* インベントリパネル */}
       <InventoryPanel />

@@ -4,11 +4,12 @@ import { useWorldStore } from '../store/worldStore'
 import type { Scene } from '../types'
 
 const DESTINATIONS: { scene: Scene; label: string; emoji: string }[] = [
-  { scene: 'room',    label: '自室',         emoji: '🏠' },
-  { scene: 'park',    label: '公園',         emoji: '🌳' },
-  { scene: 'dungeon', label: 'ダンジョン',   emoji: '⚔️' },
-  { scene: 'lottery', label: '宝くじ店',     emoji: '🎰' },
-  { scene: 'ranking', label: 'ランキング',   emoji: '🏆' },
+  { scene: 'room',      label: '自室',             emoji: '🏠' },
+  { scene: 'furniture', label: 'インテリアショップ', emoji: '🛋️' },
+  { scene: 'park',      label: '公園',             emoji: '🌳' },
+  { scene: 'dungeon',   label: 'ダンジョン',       emoji: '⚔️' },
+  { scene: 'lottery',   label: '宝くじ店',         emoji: '🎰' },
+  { scene: 'ranking',   label: 'ランキング',       emoji: '🏆' },
 ]
 
 export default function Teleport() {

@@ -42,6 +42,14 @@ export interface Pet {
     glow: boolean
   }
   unlockedSkills: string[]
+  eatCount: Record<string, number>
+}
+
+export interface FurnitureItem {
+  id: string
+  furnitureId: string
+  name: string
+  placed: boolean
 }
 
 export interface DroppedItem {
@@ -58,4 +66,4 @@ export interface Player {
   inventory: DroppedItem[]
 }
 
-export type Scene = 'room' | 'park' | 'dungeon' | 'lottery' | 'ranking'
+export type Scene = 'room' | 'park' | 'dungeon' | 'lottery' | 'ranking' | 'furniture'

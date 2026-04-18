@@ -5,15 +5,18 @@ import { usePetStore } from './store/petStore'
 import { usePlayerStore } from './store/playerStore'
 import { loadState, saveState } from './lib/api'
 import { PlayerIdContext } from './lib/playerContext'
+import { useFurnitureStore } from './store/furnitureStore'
 import LoginScreen from './components/LoginScreen'
 import Room from './components/Room'
 import Park from './components/Park'
 import Dungeon from './components/Dungeon'
 import Lottery from './components/Lottery'
 import Ranking from './components/Ranking'
+import FurnitureShop from './components/FurnitureShop'
+import type { Species } from './types'
 import './index.css'
 
-const SCENES = { room: Room, park: Park, dungeon: Dungeon, lottery: Lottery, ranking: Ranking }
+const SCENES = { room: Room, park: Park, dungeon: Dungeon, lottery: Lottery, ranking: Ranking, furniture: FurnitureShop }
 const PLAYER_ID_KEY = 'nannsiyo_player_id'
 
 export default function App() {
@@ -55,15 +58,23 @@ export default function App() {
     saveTimer.current = setTimeout(() => {
       const pet = usePetStore.getState().pet
       const { playerName, money, inventory, foodInventory } = usePlayerStore.getState()
-      saveState(playerIdRef.current!, { player: { name: playerName, money }, pet, inventory, foodInventory })
+      const furniture = useFurnitureStore.getState().items
+      saveState(playerIdRef.current!, { player: { name: playerName, money }, pet, inventory, foodInventory, furniture })
     }, 2000)
   }
 
-  const handleLoginSuccess = async (playerId: string, playerName: string) => {
+  const handleLoginSuccess = async (playerId: string, playerName: string, petName?: string, petSpecies?: Species) => {
     localStorage.setItem(PLAYER_ID_KEY, playerId)
     playerIdRef.current = playerId
     const data = await loadState(playerId)
-    if (data) { applyState(data) } else { usePlayerStore.setState({ playerName }) }
+    if (data) {
+      applyState(data)
+    } else {
+      usePlayerStore.setState({ playerName })
+      if (petName && petSpecies) {
+        usePetStore.setState((s) => ({ pet: { ...s.pet, name: petName, species: petSpecies, eatCount: {} } }))
+      }
+    }
     setLoggedIn(true)
   }
 
@@ -72,9 +83,10 @@ export default function App() {
     playerIdRef.current = null
     usePetStore.setState({
       pet: { id: 'pet-1', name: 'ドラゴン', species: 'dragon', level: 1, exp: 0,
-        stats: { happiness: 80, hunger: 60 }, appearance: { colorFilter: 'none', scale: 1, glow: false }, unlockedSkills: [] },
+        stats: { happiness: 80, hunger: 60 }, appearance: { colorFilter: 'none', scale: 1, glow: false }, unlockedSkills: [], eatCount: {} },
     })
     usePlayerStore.setState({ playerName: 'プレイヤー1', money: 0, inventory: [], droppedItems: [], foodInventory: [] })
+    useFurnitureStore.setState({ items: [] })
     useWorldStore.setState({ scene: 'room' })
     setLoggedIn(false)
   }
@@ -110,11 +122,12 @@ export default function App() {
 
 function applyState(data: {
   player: { name: string; money: number }
-  pet: { id: string; name: string; species: string; level: number; exp: number; happiness: number; hunger: number; unlocked_skills: string } | null
+  pet: { id: string; name: string; species: string; level: number; exp: number; happiness: number; hunger: number; unlocked_skills: string; eat_count: string } | null
   inventory: { id: string; item_id: string; name: string; sell_price: number }[]
   foodInventory: { id: string; food_id: string; name: string; price: number }[]
+  furniture?: { id: string; furniture_id: string; name: string; placed: number }[]
 }) {
-  const { player, pet, inventory, foodInventory } = data
+  const { player, pet, inventory, foodInventory, furniture } = data
   usePlayerStore.setState({
     playerName: player.name,
     money: player.money,
@@ -126,7 +139,13 @@ function applyState(data: {
       pet: { id: pet.id, name: pet.name, species: pet.species as never, level: pet.level, exp: pet.exp,
         stats: { happiness: pet.happiness, hunger: pet.hunger },
         appearance: { colorFilter: 'none', scale: 1, glow: false },
-        unlockedSkills: JSON.parse(pet.unlocked_skills ?? '[]') },
+        unlockedSkills: JSON.parse(pet.unlocked_skills ?? '[]'),
+        eatCount: JSON.parse(pet.eat_count ?? '{}') },
+    })
+  }
+  if (furniture) {
+    useFurnitureStore.setState({
+      items: furniture.map((f) => ({ id: f.id, furnitureId: f.furniture_id, name: f.name, placed: f.placed === 1 })),
     })
   }
 }

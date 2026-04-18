@@ -33,25 +33,27 @@ router.get('/:id/state', (req, res) => {
   const pet = db.prepare('SELECT * FROM pets WHERE player_id = ?').get(req.params.id)
   const inventory = db.prepare('SELECT * FROM inventory WHERE player_id = ?').all(req.params.id)
   const foodInventory = db.prepare('SELECT * FROM food_inventory WHERE player_id = ?').all(req.params.id)
-  res.json({ player, pet, inventory, foodInventory })
+  const furniture = db.prepare('SELECT * FROM furniture_inventory WHERE player_id = ?').all(req.params.id)
+  res.json({ player, pet, inventory, foodInventory, furniture })
 })
 
 router.put('/:id/state', (req, res) => {
-  const { player, pet, inventory, foodInventory } = req.body as {
+  const { player, pet, inventory, foodInventory, furniture } = req.body as {
     player: { name: string; money: number }
-    pet: { id: string; name: string; species: string; level: number; exp: number; stats: { happiness: number; hunger: number }; unlockedSkills: string[] }
+    pet: { id: string; name: string; species: string; level: number; exp: number; stats: { happiness: number; hunger: number }; unlockedSkills: string[]; eatCount: Record<string, number> }
     inventory: { id: string; itemId: string; name: string; sellPrice: number }[]
     foodInventory: { id: string; foodId: string; name: string; price: number }[]
+    furniture: { id: string; furnitureId: string; name: string; placed: boolean }[]
   }
   const now = new Date().toISOString()
 
   db.prepare('UPDATE players SET name = ?, money = ?, updated_at = ? WHERE id = ?')
     .run(player.name, player.money, now, req.params.id)
 
-  db.prepare(`INSERT OR REPLACE INTO pets (id, player_id, name, species, level, exp, happiness, hunger, unlocked_skills, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+  db.prepare(`INSERT OR REPLACE INTO pets (id, player_id, name, species, level, exp, happiness, hunger, unlocked_skills, eat_count, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
     .run(pet.id, req.params.id, pet.name, pet.species, pet.level, pet.exp,
-      pet.stats.happiness, pet.stats.hunger, JSON.stringify(pet.unlockedSkills), now)
+      pet.stats.happiness, pet.stats.hunger, JSON.stringify(pet.unlockedSkills), JSON.stringify(pet.eatCount ?? {}), now)
 
   db.prepare('DELETE FROM inventory WHERE player_id = ?').run(req.params.id)
   for (const item of inventory) {
@@ -63,6 +65,12 @@ router.put('/:id/state', (req, res) => {
   for (const food of foodInventory) {
     db.prepare('INSERT INTO food_inventory (id, player_id, food_id, name, price) VALUES (?, ?, ?, ?, ?)')
       .run(food.id, req.params.id, food.foodId, food.name, food.price)
+  }
+
+  db.prepare('DELETE FROM furniture_inventory WHERE player_id = ?').run(req.params.id)
+  for (const f of (furniture ?? [])) {
+    db.prepare('INSERT INTO furniture_inventory (id, player_id, furniture_id, name, placed) VALUES (?, ?, ?, ?, ?)')
+      .run(f.id, req.params.id, f.furnitureId, f.name, f.placed ? 1 : 0)
   }
 
   res.json({ ok: true })

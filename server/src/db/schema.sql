@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS pets (
   created_at      TEXT    NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS furniture_inventory (
+  id           TEXT    PRIMARY KEY,
+  player_id    TEXT    NOT NULL REFERENCES players(id),
+  furniture_id TEXT    NOT NULL,
+  name         TEXT    NOT NULL,
+  placed       INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS food_inventory (
   id        TEXT    PRIMARY KEY,
   player_id TEXT    NOT NULL REFERENCES players(id),
