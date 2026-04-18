@@ -11,4 +11,7 @@ db.pragma('foreign_keys = ON')
 const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8')
 db.exec(schema)
 
+// マイグレーション: 既存DBへのカラム追加
+try { db.exec("ALTER TABLE pets ADD COLUMN unlocked_skills TEXT NOT NULL DEFAULT '[]'") } catch {}
+
 export default db

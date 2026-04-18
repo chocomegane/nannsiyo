@@ -7,15 +7,24 @@ CREATE TABLE IF NOT EXISTS players (
 );
 
 CREATE TABLE IF NOT EXISTS pets (
-  id         TEXT    PRIMARY KEY,
-  player_id  TEXT    NOT NULL REFERENCES players(id),
-  name       TEXT    NOT NULL,
-  species    TEXT    NOT NULL,
-  level      INTEGER NOT NULL DEFAULT 1,
-  exp        INTEGER NOT NULL DEFAULT 0,
-  happiness  INTEGER NOT NULL DEFAULT 80,
-  hunger     INTEGER NOT NULL DEFAULT 60,
-  created_at TEXT    NOT NULL
+  id              TEXT    PRIMARY KEY,
+  player_id       TEXT    NOT NULL REFERENCES players(id),
+  name            TEXT    NOT NULL,
+  species         TEXT    NOT NULL,
+  level           INTEGER NOT NULL DEFAULT 1,
+  exp             INTEGER NOT NULL DEFAULT 0,
+  happiness       INTEGER NOT NULL DEFAULT 80,
+  hunger          INTEGER NOT NULL DEFAULT 60,
+  unlocked_skills TEXT    NOT NULL DEFAULT '[]',
+  created_at      TEXT    NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS food_inventory (
+  id        TEXT    PRIMARY KEY,
+  player_id TEXT    NOT NULL REFERENCES players(id),
+  food_id   TEXT    NOT NULL,
+  name      TEXT    NOT NULL,
+  price     INTEGER NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS inventory (
