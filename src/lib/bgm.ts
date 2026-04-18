@@ -34,7 +34,7 @@ class BgmManager {
   private pendingSrc = ''
   private overrides: Partial<Record<Scene, string>> = loadOverrides()
   muted = false
-  volume = 0.35
+  volume = 0.03
 
   getSrc(scene: Scene): string {
     if (this.overrides[scene]) return this.overrides[scene]!

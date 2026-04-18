@@ -11,7 +11,7 @@ const SCENES: Scene[] = ['room', 'furniture', 'park', 'dungeon', 'lottery', 'ran
 export default function BgmPlayer() {
   const scene = useWorldStore((s) => s.scene)
   const [muted, setMuted] = useState(false)
-  const [volume, setVolume] = useState(35)
+  const [volume, setVolume] = useState(3)
   const [open, setOpen] = useState(false)
   const [selections, setSelections] = useState<Partial<Record<Scene, string>>>(() => {
     const obj: Partial<Record<Scene, string>> = {}
