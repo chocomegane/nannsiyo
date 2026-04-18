@@ -12,17 +12,21 @@ interface OnlinePlayer {
 interface WorldState {
   scene: Scene
   onlinePlayers: OnlinePlayer[]
+  visitingRoom: { playerId: string; playerName: string } | null
   setScene: (scene: Scene) => void
   setOnlinePlayers: (players: OnlinePlayer[]) => void
   updatePlayerPos: (id: string, x: number, y: number) => void
   removePlayer: (id: string) => void
   addPlayer: (player: OnlinePlayer) => void
+  setVisitingRoom: (room: { playerId: string; playerName: string } | null) => void
 }
 
 export const useWorldStore = create<WorldState>((set) => ({
   scene: 'room',
   onlinePlayers: [],
+  visitingRoom: null,
   setScene: (scene) => set({ scene }),
+  setVisitingRoom: (visitingRoom) => set({ visitingRoom }),
   setOnlinePlayers: (players) => set({ onlinePlayers: players }),
   updatePlayerPos: (id, x, y) =>
     set((state) => ({

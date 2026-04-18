@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
+import { useWorldStore } from '../store/worldStore'
 import { useAchievementStore } from '../store/achievementStore'
 import { usePlayerId } from '../lib/playerContext'
 import { startDropLoop } from '../systems/dropSystem'
 import { ACHIEVEMENTS } from '../data/achievements'
-import type { Skill } from '../types'
+import { loadState } from '../lib/api'
+import type { Skill, FurnitureItem } from '../types'
 import Pet from './Pet'
 import DroppedItem from './DroppedItem'
 import MoneyDisplay from './MoneyDisplay'
@@ -20,6 +22,17 @@ import AccountMenu from './AccountMenu'
 import RoomDecorations from './RoomDecorations'
 import PetOverlay from './PetOverlay'
 
+const SPECIES_EMOJI: Record<string, string> = {
+  dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
+}
+
+interface VisitData {
+  petEmoji: string
+  petName: string
+  petLevel: number
+  furniture: FurnitureItem[]
+}
+
 export default function Room() {
   const { playerId, logout } = usePlayerId()
   const pet = usePetStore((s) => s.pet)
@@ -28,7 +41,9 @@ export default function Room() {
   const updateStats = usePetStore((s) => s.updateStats)
   const { droppedItems, addDroppedItem, collectItem } = usePlayerStore()
   const { check, newUnlock, clearNewUnlock } = useAchievementStore()
+  const { visitingRoom, setVisitingRoom } = useWorldStore()
   const [activeSkill, setActiveSkill] = useState<Skill | null>(null)
+  const [visitData, setVisitData] = useState<VisitData | null>(null)
   const itemsCollected = useRef(0)
 
   // ドロップループ
@@ -55,12 +70,71 @@ export default function Room() {
     })
   }, [check, pet.level, pet.unlockedSkills.length])
 
+  // フレンドの部屋データ読み込み
+  useEffect(() => {
+    if (!visitingRoom) { setVisitData(null); return }
+    loadState(visitingRoom.playerId).then((data) => {
+      if (!data) return
+      const p = data.pet
+      setVisitData({
+        petEmoji: p ? (SPECIES_EMOJI[p.species] ?? '🐾') : '🐾',
+        petName: p ? p.name : '？',
+        petLevel: p ? p.level : 1,
+        furniture: (data.furniture ?? []).map((f: { id: string; furniture_id: string; name: string; placed: number }) => ({
+          id: f.id, furnitureId: f.furniture_id, name: f.name, placed: f.placed === 1,
+        })),
+      })
+    })
+  }, [visitingRoom])
+
   const handleCollect = (id: string) => {
     collectItem(id)
     itemsCollected.current++
   }
 
   const newAch = ACHIEVEMENTS.find((a) => a.id === newUnlock)
+
+  if (visitingRoom) {
+    return (
+      <div
+        className="relative w-full h-screen overflow-hidden"
+        style={{ background: 'linear-gradient(180deg, #87ceeb 0%, #87ceeb 55%, #8bc34a 55%, #6aa84f 100%)' }}
+      >
+        {/* 訪問バナー */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-pink-100 border border-pink-300 rounded-2xl px-5 py-2 shadow text-pink-700 font-bold text-sm flex items-center gap-2">
+          🏠 {visitingRoom.playerName}の部屋を訪問中
+          <button
+            onClick={() => setVisitingRoom(null)}
+            className="ml-2 px-3 py-1 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-xs font-bold transition-colors"
+          >戻る</button>
+        </div>
+
+        {/* フレンドのペット */}
+        {visitData && (
+          <div className="absolute left-1/2 top-[28%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center select-none">
+            <motion.span
+              className="text-8xl drop-shadow-lg"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            >{visitData.petEmoji}</motion.span>
+            <span className="mt-2 text-white bg-black/40 rounded-full px-3 py-1 text-sm font-bold">
+              {visitData.petName} Lv.{visitData.petLevel}
+            </span>
+          </div>
+        )}
+
+        {visitData && <RoomDecorations overrideItems={visitData.furniture} />}
+
+        {/* 訪問者オーバーレイ（同じ部屋にいるフレンド） */}
+        <PetOverlay visitScene={`room_${visitingRoom.playerId}`} />
+
+        {/* 左上: 戻るボタン（モバイル用） */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-xs select-none">
+          {visitingRoom.playerName}の部屋
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -97,7 +171,6 @@ export default function Room() {
       </AnimatePresence>
 
       <RoomDecorations />
-      <PetOverlay />
 
       {/* インベントリパネル */}
       <InventoryPanel />

@@ -15,12 +15,13 @@ const DESTINATIONS: { scene: Scene; label: string; emoji: string }[] = [
 export default function Teleport() {
   const [open, setOpen] = useState(false)
   const [warping, setWarping] = useState(false)
-  const { scene, setScene } = useWorldStore()
+  const { scene, setScene, setVisitingRoom } = useWorldStore()
 
   const handleTeleport = (dest: Scene) => {
     if (dest === scene) { setOpen(false); return }
     setWarping(true)
     setTimeout(() => {
+      setVisitingRoom(null)
       setScene(dest)
       setWarping(false)
       setOpen(false)

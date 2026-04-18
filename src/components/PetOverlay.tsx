@@ -12,10 +12,13 @@ const SPECIES_EMOJI: Record<string, string> = {
 
 interface OnlinePlayer { id: string; name: string; petEmoji: string; x: number; y: number }
 
-export default function PetOverlay() {
+interface Props { visitScene?: string }
+
+export default function PetOverlay({ visitScene }: Props) {
   const pet = usePetStore((s) => s.pet)
   const playerName = usePlayerStore((s) => s.playerName)
-  const scene = useWorldStore((s) => s.scene)
+  const worldScene = useWorldStore((s) => s.scene)
+  const scene = visitScene ?? worldScene
   const [players, setPlayers] = useState<OnlinePlayer[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatBubbles, setChatBubbles] = useState<Map<string, string>>(new Map())

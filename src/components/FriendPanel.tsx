@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchFriends, sendFriendRequest, acceptFriend, removeFriend } from '../lib/api'
 import { usePlayerId } from '../lib/playerContext'
+import { useWorldStore } from '../store/worldStore'
 
 interface FriendEntry { id: string; name: string; status: string; request_id: string; direction: string }
 
@@ -8,6 +9,7 @@ interface Props { onClose: () => void }
 
 export default function FriendPanel({ onClose }: Props) {
   const { playerId } = usePlayerId()
+  const { setVisitingRoom, setScene } = useWorldStore()
   const [friends, setFriends] = useState<FriendEntry[]>([])
   const [targetName, setTargetName] = useState('')
   const [msg, setMsg] = useState('')
@@ -81,7 +83,13 @@ export default function FriendPanel({ onClose }: Props) {
           {accepted.map((f) => (
             <div key={f.request_id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2 mb-1">
               <span className="text-sm font-medium">🟢 {f.name}</span>
-              <button onClick={() => handleRemove(f.request_id)} className="px-2 py-1 bg-gray-200 text-gray-600 text-xs rounded-lg">削除</button>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => { setVisitingRoom({ playerId: f.id, playerName: f.name }); setScene('room'); onClose() }}
+                  className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-lg transition-colors"
+                >訪問</button>
+                <button onClick={() => handleRemove(f.request_id)} className="px-2 py-1 bg-gray-200 text-gray-600 text-xs rounded-lg">削除</button>
+              </div>
             </div>
           ))}
         </div>

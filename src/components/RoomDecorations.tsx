@@ -1,8 +1,12 @@
 import { useFurnitureStore } from '../store/furnitureStore'
 import { FURNITURE_TABLE, SLOT_POSITION } from '../data/furniture'
+import type { FurnitureItem } from '../types'
 
-export default function RoomDecorations() {
-  const items = useFurnitureStore((s) => s.items)
+interface Props { overrideItems?: FurnitureItem[] }
+
+export default function RoomDecorations({ overrideItems }: Props) {
+  const storeItems = useFurnitureStore((s) => s.items)
+  const items = overrideItems ?? storeItems
   const placedItems = items.filter((i) => i.placed)
 
   const slotMap = new Map<string, { emoji: string; name: string }>()
