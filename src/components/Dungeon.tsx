@@ -11,10 +11,15 @@ const SKULLS  = [15, 40, 60, 85]
 const BATS    = [{ x: 15, delay: 0 }, { x: 55, delay: 2 }, { x: 80, delay: 4 }]
 const PILLARS = [0, 25, 50, 75, 100]
 
+const MAX_HP = 100
+
 export default function Dungeon() {
   const [state, setState] = useState<DungeonState | null>(null)
   const [log, setLog] = useState<string[]>([])
   const [_floorClear, setFloorClear] = useState(false)
+  const [playerHp, setPlayerHp] = useState(MAX_HP)
+  const [defeated, setDefeated] = useState(false)
+  const [hitFlash, setHitFlash] = useState(false)
 
   useEffect(() => {
     dungeonSocket.connect()
@@ -24,9 +29,20 @@ export default function Dungeon() {
       setLog((l) => [`🎉 Floor ${floor} クリア！`, ...l.slice(0, 9)])
       setFloorClear(true)
     })
+    dungeonSocket.on('dungeon:attacked', ({ damage, enemyName }: { damage: number; enemyName: string }) => {
+      setPlayerHp((hp) => {
+        const next = Math.max(0, hp - damage)
+        if (next === 0) setDefeated(true)
+        return next
+      })
+      setLog((l) => [`💥 ${enemyName}に${damage}ダメージを受けた！`, ...l.slice(0, 9)])
+      setHitFlash(true)
+      setTimeout(() => setHitFlash(false), 300)
+    })
     return () => {
       dungeonSocket.off('dungeon:state')
       dungeonSocket.off('dungeon:floor_clear')
+      dungeonSocket.off('dungeon:attacked')
       dungeonSocket.disconnect()
     }
   }, [])
@@ -40,8 +56,18 @@ export default function Dungeon() {
   return (
     <div
       className="relative w-full h-screen overflow-hidden flex flex-col"
-      style={{ background: 'linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 50%, #0d0d0d 100%)' }}
+      style={{ background: hitFlash ? 'rgba(255,0,0,0.3)' : 'linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 50%, #0d0d0d 100%)', transition: 'background 0.15s' }}
     >
+      {defeated && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80">
+          <p className="text-5xl mb-4">💀</p>
+          <p className="text-white text-2xl font-bold mb-6">やられた...</p>
+          <button
+            onClick={() => { setDefeated(false); setPlayerHp(MAX_HP); setLog([]); dungeonSocket.emit('enter') }}
+            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl text-lg"
+          >再挑戦</button>
+        </div>
+      )}
       {PILLARS.map((x, i) => (
         <div key={i} className="absolute bottom-0 text-5xl select-none pointer-events-none opacity-30"
           style={{ left: `${x}%`, transform: 'translateX(-50%)' }}>
@@ -94,6 +120,17 @@ export default function Dungeon() {
           ⚔️ {state ? `Floor ${state.floor}` : '接続中...'}
         </div>
         <Teleport />
+      </div>
+
+      <div className="absolute top-4 left-4 z-10 bg-black/60 rounded-2xl px-4 py-2 flex items-center gap-2">
+        <span className="text-white text-sm font-bold">❤️</span>
+        <div className="w-32 h-3 bg-white/20 rounded-full overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${(playerHp / MAX_HP) * 100}%`, background: playerHp > 50 ? '#22c55e' : playerHp > 25 ? '#eab308' : '#ef4444' }}
+          />
+        </div>
+        <span className="text-white/70 text-xs">{playerHp}/{MAX_HP}</span>
       </div>
 
       <div className="flex-1 flex items-center justify-center gap-8 px-8 relative z-10">

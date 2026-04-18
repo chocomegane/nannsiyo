@@ -6,6 +6,7 @@ interface DungeonRoom {
   players: string[]
   floor: number
   enemies: Enemy[]
+  attackTimer?: ReturnType<typeof setInterval>
 }
 
 interface Enemy {
@@ -32,6 +33,17 @@ function spawnEnemies(floor: number): Enemy[] {
   })
 }
 
+function startEnemyAttackTimer(ns: ReturnType<Server['of']>, room: DungeonRoom) {
+  if (room.attackTimer) clearInterval(room.attackTimer)
+  room.attackTimer = setInterval(() => {
+    if (room.enemies.length === 0 || room.players.length === 0) return
+    const enemy = room.enemies[Math.floor(Math.random() * room.enemies.length)]
+    const targetSocketId = room.players[Math.floor(Math.random() * room.players.length)]
+    const dmg = Math.floor(5 + Math.random() * 10 + room.floor * 2)
+    ns.to(targetSocketId).emit('dungeon:attacked', { damage: dmg, enemyName: enemy.name })
+  }, 3000 + Math.random() * 2000)
+}
+
 export function registerDungeonHandlers(io: Server) {
   const ns = io.of('/dungeon')
 
@@ -42,6 +54,7 @@ export function registerDungeonHandlers(io: Server) {
       rooms.set(roomId, room)
       socket.join(roomId)
       socket.emit('dungeon:state', room)
+      startEnemyAttackTimer(ns, room)
     })
 
     socket.on('join_room', (roomId: string) => {
@@ -64,6 +77,7 @@ export function registerDungeonHandlers(io: Server) {
         room.floor++
         room.enemies = spawnEnemies(room.floor)
         ns.to(roomId).emit('dungeon:floor_clear', { floor: room.floor - 1 })
+        startEnemyAttackTimer(ns, room)
       }
       ns.to(roomId).emit('dungeon:state', room)
     })
@@ -71,7 +85,10 @@ export function registerDungeonHandlers(io: Server) {
     socket.on('disconnect', () => {
       rooms.forEach((room, roomId) => {
         room.players = room.players.filter((id) => id !== socket.id)
-        if (room.players.length === 0) rooms.delete(roomId)
+        if (room.players.length === 0) {
+          if (room.attackTimer) clearInterval(room.attackTimer)
+          rooms.delete(roomId)
+        }
       })
     })
   })
