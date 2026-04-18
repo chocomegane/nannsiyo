@@ -33,20 +33,36 @@ export default function Park() {
   const { onlinePlayers, setOnlinePlayers, updatePlayerPos, removePlayer, addPlayer } = useWorldStore()
   const pet = usePetStore((s) => s.pet)
   const playerName = usePlayerStore((s) => s.playerName)
-  const myPos = useRef({ x: 50, y: 50 })
 
   useEffect(() => {
-    parkSocket.connect()
-    parkSocket.emit('join', {
-      id: parkSocket.id,
-      name: playerName,
-      petEmoji: SPECIES_EMOJI[pet.species] ?? '🐾',
-    })
+    const petEmoji = SPECIES_EMOJI[pet.species] ?? '🐾'
+
+    const onConnect = () => {
+      parkSocket.emit('join', {
+        id: parkSocket.id,
+        name: playerName,
+        petEmoji,
+      })
+    }
+
+    parkSocket.on('connect', onConnect)
     parkSocket.on('players', setOnlinePlayers)
     parkSocket.on('player:join', addPlayer)
     parkSocket.on('player:move', ({ id, x, y }: { id: string; x: number; y: number }) => updatePlayerPos(id, x, y))
     parkSocket.on('player:leave', ({ id }: { id: string }) => removePlayer(id))
+
+    parkSocket.connect()
+
+    // ランダム自動移動（3〜6秒ごと）
+    const moveInterval = setInterval(() => {
+      const x = 15 + Math.random() * 70
+      const y = 55 + Math.random() * 25
+      parkSocket.emit('move', { x, y })
+    }, 3000 + Math.random() * 3000)
+
     return () => {
+      clearInterval(moveInterval)
+      parkSocket.off('connect', onConnect)
       parkSocket.off('players')
       parkSocket.off('player:join')
       parkSocket.off('player:move')
@@ -55,19 +71,10 @@ export default function Park() {
     }
   }, [addPlayer, pet.species, playerName, removePlayer, setOnlinePlayers, updatePlayerPos])
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = ((e.clientX - rect.left) / rect.width) * 100
-    const y = ((e.clientY - rect.top) / rect.height) * 100
-    myPos.current = { x, y }
-    parkSocket.emit('move', { x, y })
-  }
-
   return (
     <div
-      className="relative w-full h-screen overflow-hidden cursor-pointer"
+      className="relative w-full h-screen overflow-hidden"
       style={{ background: 'linear-gradient(180deg, #87ceeb 0%, #b8f0a8 55%, #6aa84f 55%, #4a7c3f 100%)' }}
-      onClick={handleClick}
     >
       {CLOUDS.map((c, i) => (
         <motion.div
@@ -119,7 +126,7 @@ export default function Park() {
       >🦋</motion.div>
 
       <div className="absolute top-4 left-4 bg-white/80 rounded-2xl px-4 py-2 shadow text-sm font-bold text-green-700 z-10">
-        🌳 公園 — クリックで移動
+        🌳 公園
       </div>
       <div className="absolute top-4 right-4 z-10">
         <Teleport />
