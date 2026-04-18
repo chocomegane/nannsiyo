@@ -5,6 +5,7 @@ import { Server } from 'socket.io'
 import playersRouter from './routes/players'
 import rankingRouter from './routes/ranking'
 import eventsRouter from './routes/events'
+import authRouter from './routes/auth'
 import { registerParkHandlers } from './sockets/park'
 import { registerDungeonHandlers } from './sockets/dungeon'
 
@@ -21,6 +22,7 @@ app.use(express.json())
 app.use('/api/players', playersRouter)
 app.use('/api/ranking', rankingRouter)
 app.use('/api/events', eventsRouter)
+app.use('/api/auth', authRouter)
 app.get('/health', (_req: import('express').Request, res: import('express').Response) => res.json({ ok: true }))
 
 registerParkHandlers(io)

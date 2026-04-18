@@ -1,9 +1,11 @@
 CREATE TABLE IF NOT EXISTS players (
-  id         TEXT    PRIMARY KEY,
-  name       TEXT    NOT NULL,
-  money      INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT    NOT NULL,
-  updated_at TEXT    NOT NULL
+  id            TEXT    PRIMARY KEY,
+  name          TEXT    NOT NULL UNIQUE,
+  money         INTEGER NOT NULL DEFAULT 0,
+  password_hash TEXT    NOT NULL DEFAULT '',
+  salt          TEXT    NOT NULL DEFAULT '',
+  created_at    TEXT    NOT NULL,
+  updated_at    TEXT    NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS pets (

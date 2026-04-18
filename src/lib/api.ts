@@ -1,10 +1,19 @@
 const BASE = import.meta.env.VITE_API_URL ?? ''
 
-export async function createPlayer(name: string): Promise<{ id: string; name: string; money: number }> {
-  const res = await fetch(`${BASE}/api/players`, {
+export async function register(name: string, password: string): Promise<{ id: string; name: string } | { error: string }> {
+  const res = await fetch(`${BASE}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, password }),
+  })
+  return res.json()
+}
+
+export async function login(name: string, password: string): Promise<{ id: string; name: string; money: number } | { error: string }> {
+  const res = await fetch(`${BASE}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, password }),
   })
   return res.json()
 }
