@@ -53,15 +53,19 @@ export default function Park() {
 
     parkSocket.connect()
 
-    // ランダム自動移動（3〜6秒ごと）
-    const moveInterval = setInterval(() => {
-      const x = 15 + Math.random() * 70
-      const y = 55 + Math.random() * 25
-      parkSocket.emit('move', { x, y })
-    }, 3000 + Math.random() * 3000)
+    let moveTimer: ReturnType<typeof setTimeout>
+    const scheduleMove = () => {
+      moveTimer = setTimeout(() => {
+        const x = 15 + Math.random() * 70
+        const y = 55 + Math.random() * 25
+        parkSocket.emit('move', { x, y })
+        scheduleMove()
+      }, 4000 + Math.random() * 4000)
+    }
+    scheduleMove()
 
     return () => {
-      clearInterval(moveInterval)
+      clearTimeout(moveTimer)
       parkSocket.off('connect', onConnect)
       parkSocket.off('players')
       parkSocket.off('player:join')
