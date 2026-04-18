@@ -24,8 +24,8 @@ export default function Dungeon() {
   const addBattleWin = usePlayerStore((s) => s.addBattleWin)
 
   useEffect(() => {
-    dungeonSocket.connect()
-    dungeonSocket.emit('enter')
+    const onConnect = () => dungeonSocket.emit('enter')
+    dungeonSocket.on('connect', onConnect)
     dungeonSocket.on('dungeon:state', (s: DungeonState) => { setState(s); setFloorClear(false) })
     dungeonSocket.on('dungeon:floor_clear', ({ floor }: { floor: number }) => {
       setLog((l) => [`🎉 Floor ${floor} クリア！`, ...l.slice(0, 9)])
@@ -42,7 +42,9 @@ export default function Dungeon() {
       setHitFlash(true)
       setTimeout(() => setHitFlash(false), 300)
     })
+    dungeonSocket.connect()
     return () => {
+      dungeonSocket.off('connect', onConnect)
       dungeonSocket.off('dungeon:state')
       dungeonSocket.off('dungeon:floor_clear')
       dungeonSocket.off('dungeon:attacked')
