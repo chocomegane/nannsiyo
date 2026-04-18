@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { randomUUID } from 'crypto'
-import db from '../db/database.js'
+import db from '../db/database'
 
 const router = Router()
 

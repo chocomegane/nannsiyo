@@ -1,8 +1,7 @@
 {
   "name": "nannsiyo-server",
   "version": "0.0.0",
-  "type": "module",
-  "scripts": {
+"scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc"

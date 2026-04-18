@@ -2,11 +2,11 @@ import express from 'express'
 import cors from 'cors'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
-import playersRouter from './routes/players.js'
-import rankingRouter from './routes/ranking.js'
-import eventsRouter from './routes/events.js'
-import { registerParkHandlers } from './sockets/park.js'
-import { registerDungeonHandlers } from './sockets/dungeon.js'
+import playersRouter from './routes/players'
+import rankingRouter from './routes/ranking'
+import eventsRouter from './routes/events'
+import { registerParkHandlers } from './sockets/park'
+import { registerDungeonHandlers } from './sockets/dungeon'
 
 const app = express()
 const httpServer = createServer(app)
