@@ -6,7 +6,7 @@ import { usePlayerStore } from './store/playerStore'
 import { loadState, saveState } from './lib/api'
 import { PlayerIdContext } from './lib/playerContext'
 import { useFurnitureStore } from './store/furnitureStore'
-import { bgm } from './lib/bgm'
+import { bgm, loadBgmTracks } from './lib/bgm'
 import LoginScreen from './components/LoginScreen'
 import Room from './components/Room'
 import Park from './components/Park'
@@ -33,6 +33,7 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
+      await loadBgmTracks()
       const savedId = localStorage.getItem(PLAYER_ID_KEY)
       if (savedId) {
         const data = await loadState(savedId)

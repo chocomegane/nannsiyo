@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { bgm, BGM_TRACKS, DEFAULT_SCENE_BGM } from '../lib/bgm'
+import { bgm, BGM_TRACKS } from '../lib/bgm'
 import { useWorldStore } from '../store/worldStore'
 import type { Scene } from '../types'
 
@@ -15,7 +15,7 @@ export default function BgmPlayer() {
   const [open, setOpen] = useState(false)
   const [selections, setSelections] = useState<Partial<Record<Scene, string>>>(() => {
     const obj: Partial<Record<Scene, string>> = {}
-    SCENES.forEach((s) => { obj[s] = bgm.getSrc(s) || DEFAULT_SCENE_BGM[s] || BGM_TRACKS[0].src })
+    SCENES.forEach((s) => { obj[s] = bgm.getSrc(s) })
     return obj
   })
 
@@ -32,6 +32,8 @@ export default function BgmPlayer() {
     bgm.setSceneBgm(sc, src)
     if (sc === scene) bgm.play(scene)
   }
+
+  const tracks = BGM_TRACKS.length > 0 ? BGM_TRACKS : [{ label: '(BGMファイルなし)', src: '' }]
 
   return (
     <div className="relative">
@@ -65,11 +67,11 @@ export default function BgmPlayer() {
               <div key={sc}>
                 <p className="text-xs text-gray-400 font-bold mb-1">{SCENE_LABELS[sc]}</p>
                 <select
-                  value={selections[sc]}
+                  value={selections[sc] ?? ''}
                   onChange={(e) => handleTrackChange(sc, e.target.value)}
                   className="w-full border rounded-xl px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300"
                 >
-                  {BGM_TRACKS.map((t) => (
+                  {tracks.map((t) => (
                     <option key={t.src} value={t.src}>{t.label}</option>
                   ))}
                 </select>
