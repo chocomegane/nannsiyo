@@ -57,6 +57,9 @@ class BgmManager {
     this.audio.loop = true
     this.audio.volume = this.volume
     this.audio.muted = this.muted
+    this.audio.addEventListener('ended', () => {
+      if (this.audio) { this.audio.currentTime = 0; this.audio.play().catch(() => {}) }
+    })
     this.audio.play().catch(() => {})
   }
 
