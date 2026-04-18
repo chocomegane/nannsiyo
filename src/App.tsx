@@ -69,6 +69,9 @@ export default function App() {
     const data = await loadState(playerId)
     if (data) {
       applyState(data)
+      if (!data.pet && petName && petSpecies) {
+        usePetStore.setState((s) => ({ pet: { ...s.pet, name: petName, species: petSpecies, eatCount: {} } }))
+      }
     } else {
       usePlayerStore.setState({ playerName })
       if (petName && petSpecies) {
