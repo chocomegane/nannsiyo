@@ -10,11 +10,15 @@ interface PlayerState {
   inventory: DroppedItem[]
   droppedItems: DroppedItem[]
   foodInventory: FoodItem[]
+  totalEarned: number
+  battleWins: number
+  itemsCollected: number
   addDroppedItem: (item: DroppedItem) => void
   collectItem: (id: string) => void
   sellAll: () => void
   buyFood: (foodId: string) => boolean
   useFood: (foodItemId: string) => void
+  addBattleWin: () => void
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -23,6 +27,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   inventory: [],
   droppedItems: [],
   foodInventory: [],
+  totalEarned: 0,
+  battleWins: 0,
+  itemsCollected: 0,
 
   addDroppedItem: (item) =>
     set((state) => ({ droppedItems: [...state.droppedItems, item] })),
@@ -31,11 +38,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set((state) => {
       const item = state.droppedItems.find((i) => i.id === id)
       if (!item) return {}
-      // アイテム回収で経験値獲得
       usePetStore.getState().gainExp(10)
       return {
         droppedItems: state.droppedItems.filter((i) => i.id !== id),
         inventory: [...state.inventory, item],
+        itemsCollected: state.itemsCollected + 1,
       }
     }),
 
@@ -43,7 +50,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set((state) => {
       const earned = state.inventory.reduce((sum, i) => sum + i.sellPrice, 0)
       if (earned > 0) usePetStore.getState().gainExp(Math.floor(earned / 10))
-      return { money: state.money + earned, inventory: [] }
+      return { money: state.money + earned, inventory: [], totalEarned: state.totalEarned + earned }
     }),
 
   buyFood: (foodId) => {
@@ -71,4 +78,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       usePetStore.getState().feedPet(item.foodId)
       return { foodInventory: state.foodInventory.filter((f) => f.id !== foodItemId) }
     }),
+
+  addBattleWin: () => set((state) => ({ battleWins: state.battleWins + 1 })),
 }))

@@ -6,6 +6,7 @@ import { usePlayerStore } from './store/playerStore'
 import { loadState, saveState } from './lib/api'
 import { PlayerIdContext } from './lib/playerContext'
 import { useFurnitureStore } from './store/furnitureStore'
+import { bgm } from './lib/bgm'
 import LoginScreen from './components/LoginScreen'
 import Room from './components/Room'
 import Park from './components/Park'
@@ -22,6 +23,8 @@ const PLAYER_ID_KEY = 'nannsiyo_player_id'
 export default function App() {
   const scene = useWorldStore((s) => s.scene)
   const SceneComponent = SCENES[scene]
+
+  useEffect(() => { if (loggedIn) bgm.play(scene) }, [scene, loggedIn])
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playerIdRef = useRef<string | null>(null)
   const [loggedIn, setLoggedIn] = useState(false)
@@ -57,9 +60,9 @@ export default function App() {
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       const pet = usePetStore.getState().pet
-      const { playerName, money, inventory, foodInventory } = usePlayerStore.getState()
+      const { playerName, money, inventory, foodInventory, totalEarned, battleWins, itemsCollected } = usePlayerStore.getState()
       const furniture = useFurnitureStore.getState().items
-      saveState(playerIdRef.current!, { player: { name: playerName, money }, pet, inventory, foodInventory, furniture })
+      saveState(playerIdRef.current!, { player: { name: playerName, money }, pet, inventory, foodInventory, furniture, stats: { totalEarned, battleWins, itemsCollected } })
     }, 2000)
   }
 
@@ -88,7 +91,7 @@ export default function App() {
       pet: { id: 'pet-1', name: 'ドラゴン', species: 'dragon', level: 1, exp: 0,
         stats: { happiness: 80, hunger: 60 }, appearance: { colorFilter: 'none', scale: 1, glow: false }, unlockedSkills: [], eatCount: {} },
     })
-    usePlayerStore.setState({ playerName: 'プレイヤー1', money: 0, inventory: [], droppedItems: [], foodInventory: [] })
+    usePlayerStore.setState({ playerName: 'プレイヤー1', money: 0, inventory: [], droppedItems: [], foodInventory: [], totalEarned: 0, battleWins: 0, itemsCollected: 0 })
     useFurnitureStore.setState({ items: [] })
     useWorldStore.setState({ scene: 'room' })
     setLoggedIn(false)
@@ -124,7 +127,7 @@ export default function App() {
 }
 
 function applyState(data: {
-  player: { name: string; money: number }
+  player: { name: string; money: number; total_earned?: number; battle_wins?: number; items_collected?: number }
   pet: { id: string; name: string; species: string; level: number; exp: number; happiness: number; hunger: number; unlocked_skills: string; eat_count: string } | null
   inventory: { id: string; item_id: string; name: string; sell_price: number }[]
   foodInventory: { id: string; food_id: string; name: string; price: number }[]
@@ -134,6 +137,9 @@ function applyState(data: {
   usePlayerStore.setState({
     playerName: player.name,
     money: player.money,
+    totalEarned: player.total_earned ?? 0,
+    battleWins: player.battle_wins ?? 0,
+    itemsCollected: player.items_collected ?? 0,
     inventory: inventory.map((i) => ({ id: i.id, itemId: i.item_id, name: i.name, sellPrice: i.sell_price, x: 10 + Math.random() * 75, y: 52 + Math.random() * 33 })),
     foodInventory: foodInventory.map((f) => ({ id: f.id, foodId: f.food_id, name: f.name, price: f.price })),
   })

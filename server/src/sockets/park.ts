@@ -23,6 +23,12 @@ export function registerParkHandlers(io: Server) {
       socket.broadcast.emit('player:join', player)
     })
 
+    socket.on('chat', (message: string) => {
+      const player = parkPlayers.get(socket.id)
+      if (!player) return
+      ns.emit('park:chat', { id: socket.id, name: player.name, petEmoji: player.petEmoji, message: String(message).slice(0, 60) })
+    })
+
     socket.on('move', (pos: { x: number; y: number }) => {
       const player = parkPlayers.get(socket.id)
       if (!player) return

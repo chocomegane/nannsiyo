@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
 import { changePassword } from '../lib/api'
+import StatsPanel from './StatsPanel'
+import GuildPanel from './GuildPanel'
+import FriendPanel from './FriendPanel'
+import BgmPlayer from './BgmPlayer'
 
 interface Props {
   playerId: string
@@ -13,6 +17,9 @@ type View = 'menu' | 'info' | 'password'
 export default function AccountMenu({ playerId, onLogout }: Props) {
   const [open, setOpen] = useState(false)
   const [view, setView] = useState<View>('menu')
+  const [showStats, setShowStats] = useState(false)
+  const [showGuild, setShowGuild] = useState(false)
+  const [showFriend, setShowFriend] = useState(false)
   const [currentPw, setCurrentPw] = useState('')
   const [newPw, setNewPw] = useState('')
   const [confirmPw, setConfirmPw] = useState('')
@@ -36,7 +43,12 @@ export default function AccountMenu({ playerId, onLogout }: Props) {
   }
 
   return (
-    <div className="relative z-[200]">
+    <>
+    {showStats && <StatsPanel onClose={() => setShowStats(false)} />}
+    {showGuild && <GuildPanel onClose={() => setShowGuild(false)} />}
+    {showFriend && <FriendPanel onClose={() => setShowFriend(false)} />}
+    <div className="relative z-[200] flex items-center gap-2">
+      <BgmPlayer />
       <button
         onClick={() => setOpen((o) => !o)}
         className="bg-white/90 rounded-2xl px-4 py-2 shadow-lg font-bold text-sm text-gray-700 hover:bg-white transition-colors flex items-center gap-1"
@@ -51,6 +63,18 @@ export default function AccountMenu({ playerId, onLogout }: Props) {
               <button onClick={() => setView('info')}
                 className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
                 📋 アカウント情報
+              </button>
+              <button onClick={() => { setOpen(false); setShowStats(true) }}
+                className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
+                📊 プレイ統計
+              </button>
+              <button onClick={() => { setOpen(false); setShowGuild(true) }}
+                className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
+                🏰 ギルド
+              </button>
+              <button onClick={() => { setOpen(false); setShowFriend(true) }}
+                className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
+                👥 フレンド
               </button>
               <button onClick={() => setView('password')}
                 className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
@@ -121,5 +145,6 @@ export default function AccountMenu({ playerId, onLogout }: Props) {
         </div>
       )}
     </div>
+    </>
   )
 }

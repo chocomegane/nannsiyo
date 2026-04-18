@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { dungeonSocket } from '../lib/socket'
+import { usePlayerStore } from '../store/playerStore'
 import Teleport from './Teleport'
 
 interface Enemy { id: string; name: string; hp: number; maxHp: number }
@@ -20,6 +21,7 @@ export default function Dungeon() {
   const [playerHp, setPlayerHp] = useState(MAX_HP)
   const [defeated, setDefeated] = useState(false)
   const [hitFlash, setHitFlash] = useState(false)
+  const addBattleWin = usePlayerStore((s) => s.addBattleWin)
 
   useEffect(() => {
     dungeonSocket.connect()
@@ -28,6 +30,7 @@ export default function Dungeon() {
     dungeonSocket.on('dungeon:floor_clear', ({ floor }: { floor: number }) => {
       setLog((l) => [`🎉 Floor ${floor} クリア！`, ...l.slice(0, 9)])
       setFloorClear(true)
+      addBattleWin()
     })
     dungeonSocket.on('dungeon:attacked', ({ damage, enemyName }: { damage: number; enemyName: string }) => {
       setPlayerHp((hp) => {

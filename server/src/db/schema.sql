@@ -54,7 +54,32 @@ CREATE TABLE IF NOT EXISTS sell_history (
   sold_at      TEXT    NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS guilds (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL UNIQUE,
+  leader_id  TEXT NOT NULL REFERENCES players(id),
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS guild_members (
+  guild_id  TEXT NOT NULL REFERENCES guilds(id) ON DELETE CASCADE,
+  player_id TEXT NOT NULL REFERENCES players(id),
+  joined_at TEXT NOT NULL,
+  PRIMARY KEY (guild_id, player_id)
+);
+
+CREATE TABLE IF NOT EXISTS friends (
+  id         TEXT PRIMARY KEY,
+  player_id  TEXT NOT NULL REFERENCES players(id),
+  friend_id  TEXT NOT NULL REFERENCES players(id),
+  status     TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT NOT NULL,
+  UNIQUE(player_id, friend_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_pets_player          ON pets(player_id);
 CREATE INDEX IF NOT EXISTS idx_inventory_player     ON inventory(player_id);
 CREATE INDEX IF NOT EXISTS idx_sell_history_player  ON sell_history(player_id);
 CREATE INDEX IF NOT EXISTS idx_players_money        ON players(money DESC);
+CREATE INDEX IF NOT EXISTS idx_friends_player       ON friends(player_id);
+CREATE INDEX IF NOT EXISTS idx_friends_friend       ON friends(friend_id);

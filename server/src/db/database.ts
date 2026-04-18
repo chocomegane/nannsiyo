@@ -16,5 +16,8 @@ try { db.exec("ALTER TABLE pets ADD COLUMN unlocked_skills TEXT NOT NULL DEFAULT
 try { db.exec("ALTER TABLE players ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''") } catch {}
 try { db.exec("ALTER TABLE players ADD COLUMN salt TEXT NOT NULL DEFAULT ''") } catch {}
 try { db.exec("ALTER TABLE pets ADD COLUMN eat_count TEXT NOT NULL DEFAULT '{}'") } catch {}
+try { db.exec("ALTER TABLE players ADD COLUMN total_earned INTEGER NOT NULL DEFAULT 0") } catch {}
+try { db.exec("ALTER TABLE players ADD COLUMN battle_wins INTEGER NOT NULL DEFAULT 0") } catch {}
+try { db.exec("ALTER TABLE players ADD COLUMN items_collected INTEGER NOT NULL DEFAULT 0") } catch {}
 
 export default db
