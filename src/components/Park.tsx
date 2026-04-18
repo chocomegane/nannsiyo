@@ -5,6 +5,7 @@ import { useWorldStore } from '../store/worldStore'
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
 import Teleport from './Teleport'
+import BgmPlayer from './BgmPlayer'
 
 const SPECIES_EMOJI: Record<string, string> = {
   dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
@@ -143,7 +144,8 @@ export default function Park() {
       <div className="absolute top-4 left-4 bg-white/80 rounded-2xl px-4 py-2 shadow text-sm font-bold text-green-700 z-10">
         🌳 公園
       </div>
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        <BgmPlayer />
         <Teleport />
       </div>
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/80 text-xs bg-black/20 rounded-full px-3 py-1">

@@ -4,6 +4,7 @@ import { parkSocket } from '../lib/socket'
 import { useWorldStore } from '../store/worldStore'
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
+import BgmPlayer from './BgmPlayer'
 
 const SPECIES_EMOJI: Record<string, string> = {
   dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
@@ -90,6 +91,10 @@ export default function PetOverlay() {
           <span className="text-[10px] text-white bg-black/40 rounded-full px-2 py-0.5 mt-0.5 whitespace-nowrap">{p.name}</span>
         </motion.div>
       ))}
+
+      <div className="absolute top-4 left-4 pointer-events-auto">
+        <BgmPlayer />
+      </div>
 
       <div className="absolute bottom-16 left-1/2 -translate-x-1/2 flex gap-2 pointer-events-auto">
         <input

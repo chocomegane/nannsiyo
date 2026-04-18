@@ -5,7 +5,6 @@ import { changePassword } from '../lib/api'
 import StatsPanel from './StatsPanel'
 import GuildPanel from './GuildPanel'
 import FriendPanel from './FriendPanel'
-import BgmPlayer from './BgmPlayer'
 
 interface Props {
   playerId: string
@@ -48,7 +47,6 @@ export default function AccountMenu({ playerId, onLogout }: Props) {
     {showGuild && <GuildPanel onClose={() => setShowGuild(false)} />}
     {showFriend && <FriendPanel onClose={() => setShowFriend(false)} />}
     <div className="relative z-[200] flex items-center gap-2">
-      <BgmPlayer />
       <button
         onClick={() => setOpen((o) => !o)}
         className="bg-white/90 rounded-2xl px-4 py-2 shadow-lg font-bold text-sm text-gray-700 hover:bg-white transition-colors flex items-center gap-1"
