@@ -36,7 +36,7 @@ export default function Teleport() {
       </button>
 
       {open && (
-        <div className="absolute bottom-12 left-0 bg-white rounded-2xl shadow-xl p-3 w-44 z-20">
+        <div className="absolute top-12 left-0 bg-white rounded-2xl shadow-xl p-3 w-44 z-20">
           {DESTINATIONS.map((d) => (
             <button
               key={d.scene}

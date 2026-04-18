@@ -35,6 +35,7 @@ export function startDropLoop(
           y: 52 + Math.random() * 33,
         }
         addDroppedItem(item)
+        console.log('[drop]', item.name, new Date().toLocaleTimeString())
       }
       schedule()
     }, delay)
