@@ -21,7 +21,7 @@ export default function FoodMenu() {
       </button>
 
       {open && (
-        <div className="absolute top-12 left-0 bg-white rounded-2xl shadow-xl p-3 w-64 z-20">
+        <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl p-3 w-64 z-20">
           {/* 所持食べ物 */}
           {foodInventory.length > 0 && (
             <div className="mb-3">

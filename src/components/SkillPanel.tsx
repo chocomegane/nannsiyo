@@ -37,7 +37,7 @@ export default function SkillPanel({ onUseSkill }: Props) {
       </button>
 
       {open && (
-        <div className="absolute top-12 left-0 bg-white rounded-2xl shadow-xl p-3 w-56 z-20">
+        <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl p-3 w-56 z-20">
           {available.length === 0 && (
             <p className="text-xs text-gray-400 text-center py-2">Lv.2以上でスキル解放</p>
           )}
