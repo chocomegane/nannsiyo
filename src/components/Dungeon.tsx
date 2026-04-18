@@ -19,7 +19,7 @@ interface DungeonState {
 export default function Dungeon() {
   const [state, setState] = useState<DungeonState | null>(null)
   const [log, setLog] = useState<string[]>([])
-  const [floorClear, setFloorClear] = useState(false)
+  const [_floorClear, setFloorClear] = useState(false)
 
   useEffect(() => {
     dungeonSocket.connect()

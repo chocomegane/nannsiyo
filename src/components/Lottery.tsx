@@ -22,8 +22,7 @@ function drawLottery() {
 }
 
 export default function Lottery() {
-  const { money, sellAll: _s } = usePlayerStore()
-  const addMoney = usePlayerStore((s) => s.sellAll)
+  const { money } = usePlayerStore()
   const [result, setResult] = useState<(typeof PRIZES)[0] | null>(null)
   const [spinning, setSpinning] = useState(false)
 
