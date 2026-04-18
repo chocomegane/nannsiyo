@@ -24,6 +24,10 @@ const ENEMY_TABLE = [
 
 const rooms = new Map<string, DungeonRoom>()
 
+function toClientRoom(room: DungeonRoom) {
+  return { id: room.id, floor: room.floor, enemies: room.enemies }
+}
+
 function spawnEnemies(floor: number): Enemy[] {
   const count = Math.min(floor, 3)
   return Array.from({ length: count }, () => {
@@ -53,7 +57,7 @@ export function registerDungeonHandlers(io: Server) {
       const room: DungeonRoom = { id: roomId, players: [socket.id], floor: 1, enemies: spawnEnemies(1) }
       rooms.set(roomId, room)
       socket.join(roomId)
-      socket.emit('dungeon:state', room)
+      socket.emit('dungeon:state', toClientRoom(room))
       startEnemyAttackTimer(ns, room)
     })
 
@@ -62,7 +66,7 @@ export function registerDungeonHandlers(io: Server) {
       if (!room || room.players.length >= 4) { socket.emit('dungeon:error', 'room full'); return }
       room.players.push(socket.id)
       socket.join(roomId)
-      ns.to(roomId).emit('dungeon:state', room)
+      ns.to(roomId).emit('dungeon:state', toClientRoom(room))
     })
 
     socket.on('attack', ({ roomId, enemyId }: { roomId: string; enemyId: string }) => {
@@ -79,7 +83,7 @@ export function registerDungeonHandlers(io: Server) {
         ns.to(roomId).emit('dungeon:floor_clear', { floor: room.floor - 1 })
         startEnemyAttackTimer(ns, room)
       }
-      ns.to(roomId).emit('dungeon:state', room)
+      ns.to(roomId).emit('dungeon:state', toClientRoom(room))
     })
 
     socket.on('disconnect', () => {
