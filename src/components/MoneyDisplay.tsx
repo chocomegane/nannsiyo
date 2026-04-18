@@ -1,15 +1,11 @@
 import { usePlayerStore } from '../store/playerStore'
 
 export default function MoneyDisplay() {
-  const { playerName, money, inventory, sellAll } = usePlayerStore()
+  const { money, inventory, sellAll } = usePlayerStore()
   const sellTotal = inventory.reduce((s, i) => s + i.sellPrice, 0)
 
   return (
-    <div className="flex flex-col gap-2 items-end">
-      <div className="bg-white/90 rounded-2xl px-4 py-2 shadow-lg text-sm text-gray-500 font-medium">
-        👤 {playerName}
-      </div>
-      <div className="flex items-center gap-3 bg-white/90 rounded-2xl px-4 py-2 shadow-lg">
+    <div className="flex items-center gap-3 bg-white/90 rounded-2xl px-4 py-2 shadow-lg">
         <span className="text-2xl">💰</span>
         <span className="text-xl font-bold text-yellow-700">{money.toLocaleString()}G</span>
         <button
@@ -24,7 +20,6 @@ export default function MoneyDisplay() {
             </span>
           )}
         </button>
-      </div>
     </div>
   )
 }

@@ -21,6 +21,7 @@ import Teleport from './Teleport'
 import AccountMenu from './AccountMenu'
 import RoomDecorations from './RoomDecorations'
 import PetOverlay from './PetOverlay'
+import BgmPlayer from './BgmPlayer'
 
 const SPECIES_EMOJI: Record<string, string> = {
   dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
@@ -153,9 +154,10 @@ export default function Room() {
         </div>
       </div>
 
-      {/* 左上: テレポート */}
-      <div className="absolute top-4 left-4 z-10">
+      {/* 左上: テレポート・BGM */}
+      <div className="absolute top-4 left-4 z-10 flex gap-2">
         <Teleport />
+        <BgmPlayer />
       </div>
 
       {/* ペット（中央上寄り） */}
