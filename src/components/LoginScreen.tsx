@@ -57,7 +57,7 @@ export default function LoginScreen({ onSuccess }: Props) {
   return (
     <div className="w-full h-screen flex items-center justify-center"
       style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl p-8 w-80">
+      <div className="bg-white rounded-3xl shadow-2xl p-8 w-80 max-h-[90vh] overflow-y-auto">
 
         {step === 1 && (
           <>
