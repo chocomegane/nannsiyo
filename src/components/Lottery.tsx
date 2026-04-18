@@ -52,7 +52,6 @@ export default function Lottery() {
       className="relative w-full h-screen overflow-hidden flex flex-col items-center justify-center gap-6"
       style={{ background: 'linear-gradient(135deg, #1a0533 0%, #4a0080 50%, #1a0533 100%)' }}
     >
-      {/* 星のキラキラ */}
       {STARS.map((s, i) => (
         <motion.div
           key={i}
@@ -63,7 +62,6 @@ export default function Lottery() {
         >✨</motion.div>
       ))}
 
-      {/* コイン */}
       {COINS.map((c, i) => (
         <motion.div
           key={i}
@@ -74,7 +72,6 @@ export default function Lottery() {
         >🪙</motion.div>
       ))}
 
-      {/* ネオン看板 */}
       <div className="absolute top-20 left-0 right-0 flex justify-around pointer-events-none select-none">
         {NEONS.map((n, i) => (
           <motion.div
@@ -86,7 +83,6 @@ export default function Lottery() {
         ))}
       </div>
 
-      {/* 縦の光線 */}
       {[20, 50, 80].map((x, i) => (
         <motion.div
           key={i}
@@ -97,7 +93,6 @@ export default function Lottery() {
         />
       ))}
 
-      {/* メインUI */}
       <div className="relative z-10 flex flex-col items-center gap-6">
         <motion.h1
           className="text-4xl font-black text-yellow-300 drop-shadow-lg"

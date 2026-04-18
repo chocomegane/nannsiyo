@@ -69,7 +69,6 @@ export default function Park() {
       style={{ background: 'linear-gradient(180deg, #87ceeb 0%, #b8f0a8 55%, #6aa84f 55%, #4a7c3f 100%)' }}
       onClick={handleClick}
     >
-      {/* 雲 */}
       {CLOUDS.map((c, i) => (
         <motion.div
           key={i}
@@ -80,7 +79,6 @@ export default function Park() {
         >☁️</motion.div>
       ))}
 
-      {/* 木（左右の端） */}
       {TREES.map((t, i) => (
         <motion.div
           key={i}
@@ -91,7 +89,6 @@ export default function Park() {
         >🌳</motion.div>
       ))}
 
-      {/* 地面の花 */}
       {FLOWERS.map((f, i) => (
         <motion.div
           key={i}
@@ -102,14 +99,12 @@ export default function Park() {
         >{f.emoji}</motion.div>
       ))}
 
-      {/* ベンチ・噴水 */}
       {OBJECTS.map((o, i) => (
         <div key={i} className="absolute text-4xl select-none pointer-events-none" style={{ left: `${o.x}%`, bottom: '39%' }}>
           {o.emoji}
         </div>
       ))}
 
-      {/* 蝶々 */}
       <motion.div
         className="absolute text-2xl select-none pointer-events-none"
         animate={{ x: [0, 80, 160, 80, 0], y: [0, -30, 0, 20, 0] }}
@@ -123,7 +118,6 @@ export default function Park() {
         style={{ left: '60%', top: '55%' }}
       >🦋</motion.div>
 
-      {/* UI */}
       <div className="absolute top-4 left-4 bg-white/80 rounded-2xl px-4 py-2 shadow text-sm font-bold text-green-700 z-10">
         🌳 公園 — クリックで移動
       </div>

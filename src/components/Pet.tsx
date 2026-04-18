@@ -50,7 +50,7 @@ function getAnimation(action: Action, dir: 1 | -1) {
         scaleX: [dir, dir * 1.05, dir, dir * 1.05, dir, dir, dir],
         transition: { duration: 1.2, ease: 'easeInOut' },
       }
-    default: // float
+    default:
       return {
         y: [0, -10, 0],
         scaleX: [dir, dir],
@@ -87,7 +87,6 @@ function ExpBar({ exp, level }: { exp: number; level: number }) {
   )
 }
 
-// ふわふわ浮遊する雫（リブリーっぽい周辺エフェクト）
 function FloatingOrb({ delay, x, emoji }: { delay: number; x: number; emoji: string }) {
   return (
     <motion.div
@@ -148,7 +147,6 @@ export default function Pet({ pet }: Props) {
           </motion.div>
         </AnimatePresence>
 
-        {/* 影 */}
         <motion.div
           className="absolute bottom-0 left-1/2 -translate-x-1/2 bg-black/20 rounded-full"
           animate={action === 'jump' ? { scaleX: [1, 1.4, 1.6, 1.4, 0.8, 1.1, 0.95, 1], scaleY: [1, 0.6, 0.4, 0.6, 1.3, 0.85, 1.05, 1] } : { scaleX: 1, scaleY: 1 }}

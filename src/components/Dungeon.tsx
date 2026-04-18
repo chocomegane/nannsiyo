@@ -42,7 +42,6 @@ export default function Dungeon() {
       className="relative w-full h-screen overflow-hidden flex flex-col"
       style={{ background: 'linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 50%, #0d0d0d 100%)' }}
     >
-      {/* 石柱 */}
       {PILLARS.map((x, i) => (
         <div key={i} className="absolute bottom-0 text-5xl select-none pointer-events-none opacity-30"
           style={{ left: `${x}%`, transform: 'translateX(-50%)' }}>
@@ -50,7 +49,6 @@ export default function Dungeon() {
         </div>
       ))}
 
-      {/* たいまつ（炎アニメーション） */}
       {TORCHES.map((x, i) => (
         <div key={i} className="absolute select-none pointer-events-none" style={{ left: `${x}%`, top: '15%' }}>
           <motion.div
@@ -58,7 +56,6 @@ export default function Dungeon() {
             animate={{ scale: [1, 1.15, 0.95, 1.1, 1], rotate: [-3, 3, -2, 2, 0] }}
             transition={{ duration: 0.8 + i * 0.1, repeat: Infinity, ease: 'easeInOut' }}
           >🔥</motion.div>
-          {/* 光の輪 */}
           <motion.div
             className="absolute inset-0 rounded-full pointer-events-none"
             animate={{ opacity: [0.3, 0.6, 0.3] }}
@@ -68,7 +65,6 @@ export default function Dungeon() {
         </div>
       ))}
 
-      {/* 骸骨 */}
       {SKULLS.map((x, i) => (
         <motion.div
           key={i}
@@ -79,7 +75,6 @@ export default function Dungeon() {
         >💀</motion.div>
       ))}
 
-      {/* コウモリ */}
       {BATS.map((b, i) => (
         <motion.div
           key={i}
@@ -90,12 +85,10 @@ export default function Dungeon() {
         >🦇</motion.div>
       ))}
 
-      {/* 地面のひびわれ */}
       <div className="absolute bottom-0 w-full h-16 opacity-20 select-none pointer-events-none flex items-end justify-around text-4xl">
         {'🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨🪨'.split('').map((s, i) => <span key={i}>{s}</span>)}
       </div>
 
-      {/* UI */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
         <div className="bg-white/10 rounded-2xl px-4 py-2 text-white font-bold text-sm">
           ⚔️ {state ? `Floor ${state.floor}` : '接続中...'}
@@ -103,7 +96,6 @@ export default function Dungeon() {
         <Teleport />
       </div>
 
-      {/* 敵一覧 */}
       <div className="flex-1 flex items-center justify-center gap-8 px-8 relative z-10">
         {state?.enemies.map((enemy) => (
           <motion.div
@@ -134,7 +126,6 @@ export default function Dungeon() {
         )}
       </div>
 
-      {/* バトルログ */}
       <div className="absolute bottom-4 left-4 bg-black/60 border border-white/10 rounded-xl p-3 w-56 max-h-32 overflow-y-auto z-10">
         {log.map((l, i) => (
           <p key={i} className="text-xs text-white/70">{l}</p>
