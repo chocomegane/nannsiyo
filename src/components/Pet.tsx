@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { Easing } from 'framer-motion'
 import type { Pet as PetType } from '../types'
 import { expToNextLevel } from '../data/experience'
+
+const E = (e: Easing) => e
 
 const SPECIES_EMOJI: Record<string, string> = {
   dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
@@ -18,43 +21,43 @@ function getAnimation(action: Action, dir: 1 | -1) {
         y: [0, -40, -50, -40, -10, 0, -5, 0],
         scaleY: [1, 1.1, 1.2, 1.1, 0.85, 1.15, 0.95, 1],
         scaleX: [1, 0.9, 0.85, 0.9, 1.15, 0.9, 1.05, 1],
-        transition: { duration: 0.8, ease: 'easeOut' },
+        transition: { duration: 0.8, ease: E('easeOut') },
       }
     case 'wiggle':
       return {
         rotate: [0, -15, 15, -12, 12, -8, 8, 0],
         scaleX: [dir, dir * 0.95, dir * 1.05, dir * 0.95, dir * 1.05, dir, dir, dir],
-        transition: { duration: 0.7, ease: 'easeInOut' },
+        transition: { duration: 0.7, ease: E('easeInOut') },
       }
     case 'spin':
       return {
         rotate: [0, 360],
         scaleX: [dir, dir],
-        transition: { duration: 0.6, ease: 'easeInOut' },
+        transition: { duration: 0.6, ease: E('easeInOut') },
       }
     case 'look':
       return {
         scaleX: [-dir, -dir, -dir, dir],
-        transition: { duration: 1.2, times: [0, 0.3, 0.7, 1], ease: 'easeInOut' },
+        transition: { duration: 1.2, times: [0, 0.3, 0.7, 1], ease: E('easeInOut') },
       }
     case 'squish':
       return {
         scaleY: [1, 1.3, 0.7, 1.15, 0.9, 1],
         scaleX: [dir, dir * 0.8, dir * 1.25, dir * 0.9, dir * 1.05, dir],
-        transition: { duration: 0.5, ease: 'easeOut' },
+        transition: { duration: 0.5, ease: E('easeOut') },
       }
     case 'happy':
       return {
         y: [0, -20, 0, -15, 0, -8, 0],
         rotate: [0, -5, 5, -5, 5, 0, 0],
         scaleX: [dir, dir * 1.05, dir, dir * 1.05, dir, dir, dir],
-        transition: { duration: 1.2, ease: 'easeInOut' },
+        transition: { duration: 1.2, ease: E('easeInOut') },
       }
     default:
       return {
         y: [0, -10, 0],
         scaleX: [dir, dir],
-        transition: { duration: 2.5, repeat: Infinity, ease: 'easeInOut' },
+        transition: { duration: 2.5, repeat: Infinity, ease: E('easeInOut') },
       }
   }
 }
@@ -93,7 +96,7 @@ function FloatingOrb({ delay, x, emoji }: { delay: number; x: number; emoji: str
       className="absolute text-lg pointer-events-none select-none"
       style={{ left: `${x}%`, bottom: '80%' }}
       animate={{ y: [0, -8, 0], opacity: [0.6, 1, 0.6], scale: [0.9, 1.1, 0.9] }}
-      transition={{ duration: 2 + delay, repeat: Infinity, delay, ease: 'easeInOut' }}
+      transition={{ duration: 2 + delay, repeat: Infinity, delay, ease: E('easeInOut') }}
     >
       {emoji}
     </motion.div>
