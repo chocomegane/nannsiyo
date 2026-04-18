@@ -2,7 +2,8 @@ import { useFurnitureStore } from '../store/furnitureStore'
 import { FURNITURE_TABLE, SLOT_POSITION } from '../data/furniture'
 
 export default function RoomDecorations() {
-  const placedItems = useFurnitureStore((s) => s.placedItems())
+  const items = useFurnitureStore((s) => s.items)
+  const placedItems = items.filter((i) => i.placed)
 
   const slotMap = new Map<string, { emoji: string; name: string }>()
   for (const item of placedItems) {

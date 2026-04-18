@@ -8,10 +8,9 @@ interface FurnitureState {
   items: FurnitureItem[]
   buyFurniture: (furnitureId: string) => boolean
   togglePlace: (id: string) => void
-  placedItems: () => FurnitureItem[]
 }
 
-export const useFurnitureStore = create<FurnitureState>((set, get) => ({
+export const useFurnitureStore = create<FurnitureState>((set) => ({
   items: [],
 
   buyFurniture: (furnitureId) => {
@@ -30,6 +29,4 @@ export const useFurnitureStore = create<FurnitureState>((set, get) => ({
     set((s) => ({
       items: s.items.map((item) => item.id === id ? { ...item, placed: !item.placed } : item),
     })),
-
-  placedItems: () => get().items.filter((i) => i.placed),
 }))
