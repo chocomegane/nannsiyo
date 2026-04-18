@@ -1,8 +1,8 @@
 import type { Pet, DroppedItem } from '../types'
 import { DROP_TABLE, weightedRandom } from '../data/items'
 
-const BASE_MIN = 30_000
-const BASE_MAX = 60_000
+const BASE_MIN = 5_000
+const BASE_MAX = 10_000
 
 // happiness が高いほどドロップが早くなる（最大50%短縮）
 function calcInterval(happiness: number): number {
