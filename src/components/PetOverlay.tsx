@@ -58,6 +58,7 @@ export default function PetOverlay() {
       parkSocket.off('player:leave')
       parkSocket.off('park:chat')
       parkSocket.disconnect()
+      setOnlinePlayers([])
     }
   }, [addPlayer, pet.species, playerName, removePlayer, setOnlinePlayers, updatePlayerPos])
 
