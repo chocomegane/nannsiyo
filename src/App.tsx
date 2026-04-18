@@ -24,11 +24,12 @@ export default function App() {
   const scene = useWorldStore((s) => s.scene)
   const SceneComponent = SCENES[scene]
 
-  useEffect(() => { if (loggedIn) bgm.play(scene) }, [scene, loggedIn])
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playerIdRef = useRef<string | null>(null)
   const [loggedIn, setLoggedIn] = useState(false)
   const [initializing, setInitializing] = useState(true)
+
+  useEffect(() => { if (loggedIn) bgm.play(scene) }, [scene, loggedIn])
 
   useEffect(() => {
     async function init() {
