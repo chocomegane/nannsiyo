@@ -3,6 +3,7 @@ import Teleport from './Teleport'
 import { usePlayerStore } from '../store/playerStore'
 import { ACHIEVEMENTS } from '../data/achievements'
 import { useAchievementStore } from '../store/achievementStore'
+import PetOverlay from './PetOverlay'
 
 interface RankEntry {
   id: string
@@ -72,6 +73,7 @@ export default function Ranking() {
           })}
         </div>
       </div>
+      <PetOverlay />
     </div>
   )
 }

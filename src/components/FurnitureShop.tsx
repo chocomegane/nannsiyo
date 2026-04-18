@@ -3,6 +3,7 @@ import { useFurnitureStore } from '../store/furnitureStore'
 import { usePlayerStore } from '../store/playerStore'
 import { FURNITURE_TABLE } from '../data/furniture'
 import Teleport from './Teleport'
+import PetOverlay from './PetOverlay'
 
 export default function FurnitureShop() {
   const [tab, setTab] = useState<'shop' | 'owned'>('shop')
@@ -85,6 +86,7 @@ export default function FurnitureShop() {
           )}
         </div>
       </div>
+      <PetOverlay />
     </div>
   )
 }

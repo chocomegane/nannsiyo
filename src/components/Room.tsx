@@ -18,6 +18,7 @@ import SkillEffect from './SkillEffect'
 import Teleport from './Teleport'
 import AccountMenu from './AccountMenu'
 import RoomDecorations from './RoomDecorations'
+import PetOverlay from './PetOverlay'
 
 export default function Room() {
   const { playerId, logout } = usePlayerId()
@@ -96,6 +97,7 @@ export default function Room() {
       </AnimatePresence>
 
       <RoomDecorations />
+      <PetOverlay />
 
       {/* インベントリパネル */}
       <InventoryPanel />

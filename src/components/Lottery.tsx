@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePlayerStore } from '../store/playerStore'
 import Teleport from './Teleport'
+import PetOverlay from './PetOverlay'
 
 const PRIZES = [
   { label: '大当たり！', emoji: '🏆', amount: 5000, chance: 0.01 },
@@ -138,6 +139,7 @@ export default function Lottery() {
       <div className="absolute top-4 right-4 z-20">
         <Teleport />
       </div>
+      <PetOverlay />
     </div>
   )
 }
