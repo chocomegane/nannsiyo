@@ -343,8 +343,9 @@ export function buildPark(root: Root, game: GameState) {
     wrapper.style.top  = (y - PET_SIZE - bobOffset) + 'px'
   }
 
-  // ── 自分のペット ──
-  const youData: PeerData = { id: game.playerId, name: game.pet.name, species: game.pet.species, level: game.pet.lv, x: 540, y: 420 }
+  // ── 自分のペット（game.petはgetterなので毎回最新値を取得）──
+  const currentPet = game.pet
+  const youData: PeerData = { id: game.playerId, name: currentPet.name, species: currentPet.species, level: currentPet.lv, x: 540, y: 420 }
   const youWrapper = makePetWrapper(youData, true)
   petLayer.appendChild(youWrapper)
 
@@ -353,7 +354,7 @@ export function buildPark(root: Root, game: GameState) {
   const socket = io(BASE_URL + '/park', { transports: ['websocket','polling'] })
 
   socket.on('connect', () => {
-    socket.emit('join', { id: game.playerId, name: game.pet.name, species: game.pet.species, level: game.pet.lv, scene: 'park' })
+    socket.emit('join', { id: game.playerId, name: currentPet.name, species: currentPet.species, level: currentPet.lv, scene: 'park' })
   })
 
   function updateCount() {
@@ -430,15 +431,17 @@ export function buildPark(root: Root, game: GameState) {
   rafId = requestAnimationFrame(tick)
 
   // ── キーボード移動 ──
-  const keyState = new Set<string>()
   const keyHandler = (e: KeyboardEvent) => {
-    if ((e.target as HTMLElement).tagName === 'INPUT') return
-    if (e.key === 'ArrowLeft')  { youData.x -= 16; e.preventDefault() }
-    if (e.key === 'ArrowRight') { youData.x += 16; e.preventDefault() }
-    youData.x = Math.max(60, Math.min(1000, youData.x))
+    // チャット入力中は無視
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return
+    if (e.key === 'ArrowLeft')  { youData.x = Math.max(60,   youData.x - 16); e.preventDefault() }
+    if (e.key === 'ArrowRight') { youData.x = Math.min(1000, youData.x + 16); e.preventDefault() }
   }
   window.addEventListener('keydown', keyHandler)
-  void keyState
+
+  // シーン表示時にフォーカスを当ててキー入力を即受け取れるようにする
+  root.setAttribute('tabindex', '-1')
+  root.focus()
 
   // ── チャットドック ──
   const chatDock = el('div')

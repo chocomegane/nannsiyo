@@ -37,14 +37,18 @@ export function buildGameState(toastEl: HTMLElement | null, playerId: string): G
     playerId,
     coin: player.money,
     get droppedItems() { return usePlayerStore.getState().droppedItems },
-    pet: {
-      species: pet.species,
-      stage,
-      lv: pet.level,
-      xp: Math.min(1, pet.exp / Math.max(1, pet.level * 10)),
-      hap: pet.stats.happiness / 100,
-      hun: pet.stats.hunger / 100,
-      name: pet.name,
+    get pet() {
+      const p = usePetStore.getState().pet
+      const s = p.level >= 50 ? 3 : p.level >= 20 ? 2 : 1
+      return {
+        species: p.species,
+        stage: s,
+        lv: p.level,
+        xp: Math.min(1, p.exp / Math.max(1, p.level * 10)),
+        hap: p.stats.happiness / 100,
+        hun: p.stats.hunger / 100,
+        name: p.name,
+      }
     },
     time: 'day',
     toast(msg: string) {
