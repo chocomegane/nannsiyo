@@ -4,6 +4,7 @@ import type { GameState } from './sceneGame'
 import { fetchRanking, playLottery, fetchBoard, postBoard } from './api'
 import { FURNITURE_TABLE } from '../data/furniture'
 import { usePlayerStore } from '../store/playerStore'
+import { usePetStore } from '../store/petStore'
 import { io } from 'socket.io-client'
 
 type Root = HTMLElement
@@ -271,6 +272,16 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
       <div style="display:grid; grid-template-columns:160px 1fr; gap:16px;">
         <div id="detailPet"></div>
         <div>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+            <span style="font-weight:700; font-size:15px;" id="petNameDisplay">${game.pet.name}</span>
+            <button class="btn" id="renameBtn" style="font-size:11px; padding:2px 8px;">✏️ 改名</button>
+          </div>
+          <div id="renameForm" style="display:none; margin-bottom:8px; display:flex; gap:6px; align-items:center;">
+            <input id="renameInput" type="text" maxlength="16" value="${game.pet.name}"
+              style="padding:4px 8px; border:2px solid var(--ink); border-radius:6px; font-family:inherit; font-size:13px; width:120px;" />
+            <button class="btn primary" id="renameConfirm" style="font-size:11px;">決定</button>
+            <button class="btn" id="renameCancel" style="font-size:11px;">取消</button>
+          </div>
           <div><b>種族:</b> ${speciesName[game.pet.species]}</div>
           <div><b>進化:</b> ${stageNamesD[game.pet.stage]} (Lv.${game.pet.lv})</div>
           <div style="margin-top:10px">♥ 幸福</div>
@@ -283,6 +294,40 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
       </div>
     `
     inner.querySelector('#detailPet')!.appendChild(createPetCanvas(game.pet.species as Species, game.pet.stage, 160))
+
+    const renameBtn     = inner.querySelector<HTMLElement>('#renameBtn')!
+    const renameForm    = inner.querySelector<HTMLElement>('#renameForm')!
+    const renameInput   = inner.querySelector<HTMLInputElement>('#renameInput')!
+    const renameConfirm = inner.querySelector<HTMLElement>('#renameConfirm')!
+    const renameCancel  = inner.querySelector<HTMLElement>('#renameCancel')!
+    const nameDisplay   = inner.querySelector<HTMLElement>('#petNameDisplay')!
+
+    renameForm.style.display = 'none'
+
+    renameBtn.addEventListener('click', () => {
+      renameForm.style.display = 'flex'
+      renameBtn.style.display = 'none'
+      renameInput.focus()
+      renameInput.select()
+    })
+    renameCancel.addEventListener('click', () => {
+      renameForm.style.display = 'none'
+      renameBtn.style.display = ''
+    })
+    const doRename = () => {
+      const newName = renameInput.value.trim()
+      if (!newName) return
+      usePetStore.setState(s => ({ pet: { ...s.pet, name: newName } }))
+      nameDisplay.textContent = newName
+      const h2 = inner.querySelector('h2')
+      if (h2) h2.textContent = `📜 ${newName} の詳細`
+      renameForm.style.display = 'none'
+      renameBtn.style.display = ''
+      game.toast(`✏️ 名前を「${newName}」に変更しました`)
+    }
+    renameConfirm.addEventListener('click', doRename)
+    renameInput.addEventListener('keydown', e => { if (e.key === 'Enter') doRename() })
+
     ;(inner.querySelector('[data-close]') as HTMLElement).addEventListener('click', () => overlay.remove())
     overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove() })
     overlay.appendChild(inner)
