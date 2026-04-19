@@ -32,6 +32,56 @@ export const EVOLUTION_TABLE: Record<Species, EvolutionStage[]> = {
     { minLevel: 20, title: 'ゴーレム',     sizeBonus: 1.2 },
     { minLevel: 50, title: '鋼鉄巨人',     sizeBonus: 1.45 },
   ],
+  fox: [
+    { minLevel: 1,  title: 'こぎつね',     sizeBonus: 1.0 },
+    { minLevel: 20, title: 'キツネ',       sizeBonus: 1.2 },
+    { minLevel: 50, title: '九尾の狐',     sizeBonus: 1.45 },
+  ],
+  cat: [
+    { minLevel: 1,  title: 'こねこ',       sizeBonus: 1.0 },
+    { minLevel: 20, title: 'まほうネコ',   sizeBonus: 1.2 },
+    { minLevel: 50, title: '猫又',         sizeBonus: 1.45 },
+  ],
+  bunny: [
+    { minLevel: 1,  title: 'こうさぎ',     sizeBonus: 1.0 },
+    { minLevel: 20, title: 'ラッキーバニー', sizeBonus: 1.2 },
+    { minLevel: 50, title: '月のうさぎ',   sizeBonus: 1.45 },
+  ],
+  penguin: [
+    { minLevel: 1,  title: 'ひなペンギン', sizeBonus: 1.0 },
+    { minLevel: 20, title: 'ペンギン',     sizeBonus: 1.2 },
+    { minLevel: 50, title: '氷帝ペンギン', sizeBonus: 1.45 },
+  ],
+  wolf: [
+    { minLevel: 1,  title: 'こおおかみ',   sizeBonus: 1.0 },
+    { minLevel: 20, title: 'ウルフ',       sizeBonus: 1.2 },
+    { minLevel: 50, title: '月狼王',       sizeBonus: 1.45 },
+  ],
+  bear: [
+    { minLevel: 1,  title: 'こぐま',       sizeBonus: 1.0 },
+    { minLevel: 20, title: 'クマ',         sizeBonus: 1.2 },
+    { minLevel: 50, title: '大熊王',       sizeBonus: 1.45 },
+  ],
+  panda: [
+    { minLevel: 1,  title: 'こパンダ',     sizeBonus: 1.0 },
+    { minLevel: 20, title: 'パンダ',       sizeBonus: 1.2 },
+    { minLevel: 50, title: '竹林の主',     sizeBonus: 1.45 },
+  ],
+  tiger: [
+    { minLevel: 1,  title: 'こトラ',       sizeBonus: 1.0 },
+    { minLevel: 20, title: 'タイガー',     sizeBonus: 1.2 },
+    { minLevel: 50, title: '白虎',         sizeBonus: 1.45 },
+  ],
+  fairy: [
+    { minLevel: 1,  title: 'こフェアリー', sizeBonus: 1.0 },
+    { minLevel: 20, title: 'フェアリー',   sizeBonus: 1.2 },
+    { minLevel: 50, title: '妖精女王',     sizeBonus: 1.45 },
+  ],
+  ghost: [
+    { minLevel: 1,  title: 'ちいゴースト', sizeBonus: 1.0 },
+    { minLevel: 20, title: 'ゴースト',     sizeBonus: 1.2 },
+    { minLevel: 50, title: '霊王',         sizeBonus: 1.45 },
+  ],
 }
 
 export function getEvolutionStage(species: Species, level: number): EvolutionStage {

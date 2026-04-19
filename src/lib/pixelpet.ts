@@ -238,8 +238,8 @@ function tinyFox(stage: number): Grid {
   const S = tinyRound(stage,
     put => { // 三角耳
       const cy = stage === 1 ? 11 : 10
-      put(11, cy); put(12, cy - 1); put(13, cy - 2); put(13, cy)
-      put(18, cy); put(19, cy - 1); put(20, cy - 2); put(20, cy)
+      put(11, cy, 'b'); put(12, cy - 1, 'b'); put(13, cy - 2, 'b'); put(13, cy, 'b')
+      put(18, cy, 'b'); put(19, cy - 1, 'b'); put(20, cy - 2, 'b'); put(20, cy, 'b')
       put(12, cy, 'l'); put(19, cy, 'l')
     },
     (put, S) => { // 白マズル
@@ -260,8 +260,8 @@ function tinyCat(stage: number): Grid {
   return tinyRound(stage,
     put => { // 尖った耳
       const cy = stage === 1 ? 10 : 9
-      put(11, cy); put(11, cy - 1); put(12, cy - 2)
-      put(20, cy); put(20, cy - 1); put(19, cy - 2)
+      put(11, cy, 'b'); put(11, cy - 1, 'b'); put(12, cy - 2, 'b')
+      put(20, cy, 'b'); put(20, cy - 1, 'b'); put(19, cy - 2, 'b')
       put(12, cy, 'l'); put(19, cy, 'l')
     },
     put => {
@@ -313,8 +313,8 @@ function tinyWolf(stage: number): Grid {
   return tinyRound(stage,
     put => {
       const cy = stage === 1 ? 10 : 9
-      put(11, cy); put(12, cy - 1); put(12, cy)
-      put(20, cy); put(19, cy - 1); put(19, cy)
+      put(11, cy, 'b'); put(12, cy - 1, 'b'); put(12, cy, 'b')
+      put(20, cy, 'b'); put(19, cy - 1, 'b'); put(19, cy, 'b')
       put(11, cy, 'd'); put(20, cy, 'd')
     },
     (put, S) => {
@@ -331,8 +331,8 @@ function tinyBear(stage: number): Grid {
   return tinyRound(stage,
     put => {
       const cy = stage === 1 ? 11 : 10
-      put(11, cy); put(12, cy); put(11, cy + 1)
-      put(19, cy); put(20, cy); put(20, cy + 1)
+      put(11, cy, 'b'); put(12, cy, 'b'); put(11, cy + 1, 'b')
+      put(19, cy, 'b'); put(20, cy, 'b'); put(20, cy + 1, 'b')
       put(11, cy + 1, 'l'); put(20, cy + 1, 'l')
     },
     (put, S) => {
