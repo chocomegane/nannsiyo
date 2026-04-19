@@ -13,6 +13,7 @@ import boardRouter from './routes/board'
 import settingsRouter from './routes/settings'
 import { registerParkHandlers } from './sockets/park'
 import { registerDungeonHandlers } from './sockets/dungeon'
+import { registerRadioHandlers } from './sockets/radio'
 
 const app = express()
 const httpServer = createServer(app)
@@ -37,6 +38,7 @@ app.get('/health', (_req: import('express').Request, res: import('express').Resp
 
 registerParkHandlers(io)
 registerDungeonHandlers(io)
+registerRadioHandlers(io)
 
 const PORT = Number(process.env.PORT ?? 3000)
 httpServer.listen(PORT, () => console.log(`server running on :${PORT}`))

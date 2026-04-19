@@ -13,6 +13,7 @@ const NAV: { scene: Scene; ic: string; label: string }[] = [
   { scene: 'lottery',   ic: '🎰', label: '宝くじ店' },
   { scene: 'ranking',   ic: '🏆', label: 'ランキング' },
   { scene: 'furniture', ic: '🛋️', label: 'インテリア' },
+  { scene: 'radio',     ic: '📻', label: 'ラジオルーム' },
 ]
 
 interface Props { onLogout: () => void }

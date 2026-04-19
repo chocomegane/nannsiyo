@@ -1264,3 +1264,305 @@ export function buildFriendRoom(root: Root, game: GameState, showScene: (k: stri
   `
   root.appendChild(dock)
 }
+
+// ── RADIO ROOM ─────────────────────────────────────────────────────────────
+const RADIO_STATIONS = [
+  { name: 'Lofi Hip Hop',        emoji: '🎵', url: 'https://stream.zeno.fm/f3wvbbqmdg8uv' },
+  { name: 'Jazz & Blues',        emoji: '🎷', url: 'https://stream.zeno.fm/tsxbcqz4p7zuv' },
+  { name: 'Classic FM',          emoji: '🎻', url: 'https://media-ice.musicradio.com/ClassicFMMP3' },
+  { name: 'Chillout',            emoji: '🌊', url: 'https://stream.zeno.fm/yn65zsgyp7zuv' },
+  { name: 'J-Pop / Anime BGM',   emoji: '🌸', url: 'https://stream.zeno.fm/2p5g00q0q2zuv' },
+]
+
+export function buildRadio(root: Root, game: GameState) {
+  root.style.background = 'linear-gradient(180deg,#2a1e3a 0%,#3a2a4a 60%,#4a3a5a 100%)'
+
+  // 背景SVG（ラウンジ風）
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg')
+  svg.setAttribute('viewBox','0 0 1080 600')
+  svg.setAttribute('preserveAspectRatio','xMidYMax slice')
+  svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%;'
+  svg.innerHTML = `
+    <rect x="0" y="0" width="1080" height="600" fill="#1e1428"/>
+    <rect x="0" y="380" width="1080" height="220" fill="#2a1e3a"/>
+    <rect x="0" y="460" width="1080" height="140" fill="#352545"/>
+    <path d="-20 480 Q 540 450 1100 480" fill="none" stroke="#4a3a5a" stroke-width="40"/>
+    <!-- stage lights -->
+    <polygon points="100,0 60,200 140,200" fill="rgba(255,220,100,0.08)"/>
+    <polygon points="980,0 940,200 1020,200" fill="rgba(255,220,100,0.08)"/>
+    <circle cx="100" cy="30" r="18" fill="#ffe066" opacity="0.7"/>
+    <circle cx="980" cy="30" r="18" fill="#ffe066" opacity="0.7"/>
+    <!-- disco ball -->
+    <circle cx="540" cy="60" r="32" fill="none" stroke="#c0c0c0" stroke-width="2"/>
+    <circle cx="540" cy="60" r="28" fill="#aaa"/>
+    ${Array.from({length:12}).map((_,i)=>{const a=i*30*Math.PI/180;const x=540+28*Math.cos(a);const y=60+28*Math.sin(a);return `<circle cx="${x}" cy="${y}" r="3" fill="#fff" opacity="0.8"/>`}).join('')}
+    <!-- neon sign -->
+    <rect x="380" y="100" width="320" height="60" rx="12" fill="none" stroke="#ff66cc" stroke-width="3" filter="url(#neon)"/>
+    <text x="540" y="140" text-anchor="middle" fill="#ff66cc" font-size="26" font-weight="bold" font-family="monospace">RADIO LOUNGE</text>
+    <!-- sofa left -->
+    <rect x="60" y="440" width="160" height="50" rx="10" fill="#7a4a8a" stroke="#2a1428" stroke-width="2"/>
+    <rect x="60" y="420" width="24" height="70" rx="8" fill="#8a5a9a" stroke="#2a1428" stroke-width="2"/>
+    <rect x="196" y="420" width="24" height="70" rx="8" fill="#8a5a9a" stroke="#2a1428" stroke-width="2"/>
+    <!-- sofa right -->
+    <rect x="860" y="440" width="160" height="50" rx="10" fill="#7a4a8a" stroke="#2a1428" stroke-width="2"/>
+    <rect x="860" y="420" width="24" height="70" rx="8" fill="#8a5a9a" stroke="#2a1428" stroke-width="2"/>
+    <rect x="996" y="420" width="24" height="70" rx="8" fill="#8a5a9a" stroke="#2a1428" stroke-width="2"/>
+    <!-- center table -->
+    <ellipse cx="540" cy="510" rx="80" ry="24" fill="#4a2a5a" stroke="#2a1428" stroke-width="2"/>
+    <!-- speaker left -->
+    <rect x="140" y="320" width="60" height="100" rx="6" fill="#1a1020" stroke="#3a2a4a" stroke-width="2"/>
+    <circle cx="170" cy="350" r="18" fill="#2a2030"/>
+    <circle cx="170" cy="390" r="12" fill="#2a2030"/>
+    <!-- speaker right -->
+    <rect x="880" y="320" width="60" height="100" rx="6" fill="#1a1020" stroke="#3a2a4a" stroke-width="2"/>
+    <circle cx="910" cy="350" r="18" fill="#2a2030"/>
+    <circle cx="910" cy="390" r="12" fill="#2a2030"/>
+    <!-- stars -->
+    ${Array.from({length:40}).map((_,i)=>{const x=(i*137)%1080;const y=(i*97)%160;return `<circle cx="${x}" cy="${y}" r="1" fill="#fff" opacity="${0.3+0.5*(i%3)/2}"/>`}).join('')}
+  `
+  root.appendChild(svg)
+
+  const petLayer = el('div')
+  petLayer.style.cssText = 'position:absolute; inset:0 0 92px 0; pointer-events:none;'
+  root.appendChild(petLayer)
+
+  const PET_SIZE = 80
+  type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
+
+  const X_MIN = 120, X_MAX = 960
+  const Y_MIN = 410, Y_MAX = 470
+
+  type WanderState = { x:number; y:number; targetX:number; targetY:number; speed:number; idleUntil:number; facing:number; phase:number }
+
+  function randTarget() { return { tx: X_MIN+Math.random()*(X_MAX-X_MIN), ty: Y_MIN+Math.random()*(Y_MAX-Y_MIN) } }
+  function newWanderState(startX?: number): WanderState {
+    const x = startX ?? (X_MIN+Math.random()*(X_MAX-X_MIN))
+    const y = Y_MIN+Math.random()*(Y_MAX-Y_MIN)
+    const { tx, ty } = randTarget()
+    return { x, y, targetX:tx, targetY:ty, speed:0.5+Math.random()*0.7, idleUntil:0, facing:1, phase:Math.random()*Math.PI*2 }
+  }
+  function stepWander(w: WanderState, now: number): number {
+    if (now < w.idleUntil) return 0
+    const dx = w.targetX-w.x; const dy = w.targetY-w.y
+    const dist = Math.sqrt(dx*dx+dy*dy)
+    if (dist < 3) {
+      if (Math.random() < 0.3) { w.idleUntil = now+800+Math.random()*2500; return 0 }
+      const t = randTarget(); w.targetX=t.tx; w.targetY=t.ty; w.speed=0.4+Math.random()*0.8
+    } else {
+      w.x += (dx/dist)*w.speed; w.y += (dy/dist)*w.speed*0.5; w.facing = dx>0?1:-1
+    }
+    return Math.abs(Math.sin((now+w.phase*300)/280))*5
+  }
+
+  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; chatTimer?: ReturnType<typeof setTimeout>; wander: WanderState }>()
+  function stageFromLevel(lv: number) { return lv>=50?3:lv>=20?2:1 }
+
+  function makePetWrapper(data: PeerData, isYou: boolean): HTMLElement {
+    const w = el('div')
+    w.style.cssText = `position:absolute; width:${PET_SIZE}px; display:flex; flex-direction:column; align-items:center; pointer-events:auto; cursor:pointer; user-select:none;`
+    w.appendChild(createPetCanvas(data.species as Species, stageFromLevel(data.level), PET_SIZE))
+    const lbl = el('div')
+    lbl.style.cssText = `background:${isYou?'var(--accent)':'#4a2a5a'}; color:#fff; border:1.5px solid var(--ink); border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; white-space:nowrap; margin-top:2px;`
+    lbl.textContent = data.name+(isYou?' (you)':'')
+    w.appendChild(lbl)
+    w.addEventListener('mouseenter', () => {
+      if (w.querySelector('.radio-status')) return
+      const bub = el('div','radio-status')
+      bub.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); background:#2a1428; color:#fff; border:2px solid var(--ink); border-radius:10px; padding:6px 12px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap; z-index:20; pointer-events:none;`
+      bub.innerHTML = `<b>${data.name}</b><br>Lv.${data.level} · ${data.species}`
+      w.appendChild(bub)
+    })
+    w.addEventListener('mouseleave', () => w.querySelector('.radio-status')?.remove())
+    return w
+  }
+
+  function showChatBubble(wrapper: HTMLElement, message: string, chatTimer?: ReturnType<typeof setTimeout>) {
+    if (chatTimer) clearTimeout(chatTimer)
+    let bub = wrapper.querySelector<HTMLElement>('.chat-bub')
+    if (!bub) {
+      bub = el('div','chat-bub')
+      bub.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); background:#fff; border:2px solid var(--ink); border-radius:10px; padding:5px 10px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap; z-index:10; pointer-events:none;`
+      wrapper.insertBefore(bub, wrapper.firstChild)
+    }
+    bub.textContent = message
+    return setTimeout(() => bub?.remove(), 5000)
+  }
+
+  function setPetPos(wrapper: HTMLElement, x: number, y: number, bob: number) {
+    wrapper.style.left = (x-PET_SIZE/2)+'px'
+    wrapper.style.top  = (y-PET_SIZE-bob)+'px'
+  }
+
+  const youWander = newWanderState()
+  const currentPet = game.pet
+  const youData: PeerData = { id:game.playerId, name:currentPet.name, species:currentPet.species, level:currentPet.lv, x:youWander.x, y:420 }
+  const youWrapper = makePetWrapper(youData, true)
+  petLayer.appendChild(youWrapper)
+
+  // ── Socket ──
+  const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
+  const socket = io(BASE_URL+'/radio', { transports:['websocket','polling'] })
+  let currentStationIdx = 0
+  const audio = new Audio()
+  audio.volume = 0.6
+
+  function loadStation(idx: number) {
+    currentStationIdx = idx
+    const s = RADIO_STATIONS[idx]
+    if (!s) return
+    audio.src = s.url
+    audio.play().catch(() => {})
+    updateRadioUI()
+  }
+
+  function updateRadioUI() {
+    const s = RADIO_STATIONS[currentStationIdx]
+    const nameEl = root.querySelector<HTMLElement>('#radioStationName')
+    if (nameEl && s) nameEl.textContent = `${s.emoji} ${s.name}`
+    root.querySelectorAll<HTMLElement>('.station-btn').forEach((btn, i) => {
+      btn.style.background = i===currentStationIdx ? 'var(--accent)' : '#2a1428'
+      btn.style.color = i===currentStationIdx ? '#fff' : '#ccc'
+    })
+    const countEl = root.querySelector<HTMLElement>('#radioCount')
+    if (countEl) countEl.textContent = `● ${peers.size+1} 人がリスニング中`
+  }
+
+  socket.on('connect', () => {
+    socket.emit('join', { id:game.playerId, name:currentPet.name, species:currentPet.species, level:currentPet.lv })
+  })
+
+  socket.on('station', ({ index }: { index: number }) => {
+    if (index !== currentStationIdx) loadStation(index)
+  })
+
+  socket.on('players', (players: PeerData[]) => {
+    players.forEach(p => {
+      if (p.id === game.playerId) return
+      const w = makePetWrapper(p, false)
+      petLayer.appendChild(w)
+      peers.set(p.id, { data:p, wrapper:w, wander:newWanderState(p.x) })
+    })
+    updateRadioUI()
+  })
+
+  socket.on('player:join', (p: PeerData) => {
+    if (p.id === game.playerId || peers.has(p.id)) return
+    const w = makePetWrapper(p, false)
+    petLayer.appendChild(w)
+    peers.set(p.id, { data:p, wrapper:w, wander:newWanderState(p.x) })
+    updateRadioUI()
+  })
+
+  socket.on('player:leave', ({ id }: { id: string }) => {
+    const peer = peers.get(id)
+    if (peer) { peer.wrapper.querySelectorAll('canvas').forEach((c: Element) => (c as HTMLCanvasElement & { destroy?: () => void }).destroy?.()); peer.wrapper.remove() }
+    peers.delete(id)
+    updateRadioUI()
+  })
+
+  socket.on('player:move', ({ id, x }: { id: string; x: number; y: number }) => {
+    const peer = peers.get(id)
+    if (peer) peer.wander.targetX = x
+  })
+
+  socket.on('radio:chat', ({ id, message }: { id: string; message: string }) => {
+    if (id === socket.id) { showChatBubble(youWrapper, message); return }
+    const peer = Array.from(peers.values()).find(p => p.data.id === id)
+    if (peer) peer.chatTimer = showChatBubble(peer.wrapper, message, peer.chatTimer)
+  })
+
+  function setFacing(wrapper: HTMLElement, dir: number) {
+    const canvas = wrapper.querySelector('canvas')
+    if (canvas) canvas.style.transform = dir<0?'scaleX(-1)':'scaleX(1)'
+  }
+
+  let rafId = 0, lastMoveEmit = 0
+  function tick() {
+    const now = performance.now()
+    const youBob = stepWander(youWander, now)
+    setFacing(youWrapper, youWander.facing)
+    setPetPos(youWrapper, youWander.x, youWander.y, youBob)
+    peers.forEach(peer => {
+      const bob = stepWander(peer.wander, now)
+      setFacing(peer.wrapper, peer.wander.facing)
+      setPetPos(peer.wrapper, peer.wander.x, peer.wander.y, bob)
+    })
+    if (now-lastMoveEmit > 150) {
+      socket.emit('move', { x:Math.round(youWander.x), y:youWander.y })
+      lastMoveEmit = now
+    }
+    rafId = requestAnimationFrame(tick)
+  }
+  rafId = requestAnimationFrame(tick)
+
+  // ── ラジオUIパネル ──
+  const radioPanel = el('div')
+  radioPanel.style.cssText = `position:absolute; top:12px; right:16px; width:260px; background:#1a0e28; border:2px solid #8844aa; border-radius:14px; box-shadow:0 0 16px #8844aa44; padding:12px 14px; z-index:10; color:#fff;`
+  radioPanel.innerHTML = `
+    <div style="font-size:13px; font-weight:700; margin-bottom:8px; color:#ff88cc;">📻 ラジオ</div>
+    <div id="radioStationName" style="font-size:12px; margin-bottom:10px; color:#ffccee; min-height:18px;">接続中...</div>
+    <div style="display:flex; flex-direction:column; gap:5px;">
+      ${RADIO_STATIONS.map((s,i)=>`
+        <button class="station-btn" data-idx="${i}"
+          style="padding:5px 10px; border-radius:8px; border:1.5px solid #8844aa; background:#2a1428; color:#ccc; cursor:pointer; font-size:12px; text-align:left; transition:background 0.2s;">
+          ${s.emoji} ${s.name}
+        </button>
+      `).join('')}
+    </div>
+    <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+      <span style="font-size:11px; color:#aaa;">音量</span>
+      <input id="radioVol" type="range" min="0" max="1" step="0.05" value="0.6" style="flex:1; accent-color:#ff88cc;" />
+      <button id="radioMute" style="background:none; border:none; color:#ccc; cursor:pointer; font-size:16px;" title="ミュート">🔊</button>
+    </div>
+    <div id="radioCount" style="margin-top:8px; font-size:11px; color:#aaa;">● 1 人がリスニング中</div>
+  `
+  root.appendChild(radioPanel)
+
+  radioPanel.querySelectorAll<HTMLElement>('.station-btn').forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      socket.emit('change_station', { index: i })
+      loadStation(i)
+    })
+  })
+
+  const volSlider = radioPanel.querySelector<HTMLInputElement>('#radioVol')!
+  volSlider.addEventListener('input', () => { audio.volume = parseFloat(volSlider.value) })
+
+  let muted = false
+  const muteBtn = radioPanel.querySelector<HTMLElement>('#radioMute')!
+  muteBtn.addEventListener('click', () => {
+    muted = !muted
+    audio.muted = muted
+    muteBtn.textContent = muted ? '🔇' : '🔊'
+  })
+
+  // ── チャットドック ──
+  const chatDock = el('div')
+  chatDock.style.cssText = `position:absolute; left:16px; right:16px; bottom:16px; height:60px; background:#1a0e28; border:2px solid #8844aa; border-radius:14px; box-shadow:4px 4px 0 var(--ink); padding:0 14px; z-index:10; display:flex; align-items:center; gap:10px;`
+  chatDock.innerHTML = `
+    <span style="font-weight:700; font-size:13px; color:#ff88cc;">💬 チャット</span>
+    <input id="chatInput" type="text" maxlength="60" placeholder="メッセージを入力…" style="flex:1; padding:8px 12px; border:2px solid #8844aa; border-radius:8px; font-family:inherit; font-size:13px; background:#2a1428; color:#fff;" />
+    <button class="btn primary" id="chatSend">送信</button>
+  `
+  root.appendChild(chatDock)
+
+  const chatInput = chatDock.querySelector<HTMLInputElement>('#chatInput')!
+  function sendChat() {
+    const msg = chatInput.value.trim()
+    if (!msg) return
+    socket.emit('chat', msg)
+    showChatBubble(youWrapper, msg)
+    chatInput.value = ''
+  }
+  chatInput.addEventListener('keydown', e => { e.stopPropagation(); if (e.key==='Enter') sendChat() })
+  chatDock.querySelector('#chatSend')!.addEventListener('click', sendChat)
+
+  addBoardButton(root, 'radio', game)
+
+  ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
+    socket.disconnect()
+    cancelAnimationFrame(rafId)
+    audio.pause()
+    audio.src = ''
+  }
+}

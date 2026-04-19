@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { buildGameState } from '../lib/sceneGame'
-import { buildRoom, buildPark, buildDungeon, buildLottery, buildRanking, buildFurniture, buildFriendRoom } from '../lib/sceneBuilders'
+import { buildRoom, buildPark, buildDungeon, buildLottery, buildRanking, buildFurniture, buildFriendRoom, buildRadio } from '../lib/sceneBuilders'
 import { useWorldStore } from '../store/worldStore'
 import { usePlayerId } from '../lib/playerContext'
 import type { Scene } from '../types'
@@ -13,6 +13,7 @@ const BUILDERS = {
   ranking: buildRanking,
   furniture: buildFurniture,
   friend: buildFriendRoom,
+  radio: buildRadio,
 }
 
 export default function SceneMount({ sceneKey }: { sceneKey: string }) {
