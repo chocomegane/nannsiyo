@@ -32,6 +32,7 @@ class BgmManager {
   private playerId: string | null = null
   muted = false
   volume = 0.03
+  radioStation = 0
 
   // ログイン後にDBから設定を読み込む
   async loadFromDb(playerId: string) {
@@ -40,6 +41,7 @@ class BgmManager {
     this.volume = s.bgm_volume
     this.muted = s.bgm_muted
     this.overrides = s.bgm_scene as Partial<Record<Scene, string>>
+    this.radioStation = s.radio_station ?? 0
     if (this.audio) {
       this.audio.volume = this.volume
       this.audio.muted = this.muted
@@ -55,6 +57,7 @@ class BgmManager {
         bgm_volume: this.volume,
         bgm_muted: this.muted,
         bgm_scene: this.overrides as Record<string, string>,
+        radio_station: this.radioStation,
       })
     }, 800)
   }
@@ -114,6 +117,11 @@ class BgmManager {
   setVolume(val: number) {
     this.volume = val
     if (this.audio) this.audio.volume = val
+    this.scheduleSave()
+  }
+
+  setRadioStation(idx: number) {
+    this.radioStation = idx
     this.scheduleSave()
   }
 }

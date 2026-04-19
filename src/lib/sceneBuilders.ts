@@ -2,6 +2,7 @@ import { createPetCanvas } from './pixelpet'
 import type { Species } from '../types'
 import type { GameState } from './sceneGame'
 import { fetchRanking, playLottery, fetchBoard, postBoard } from './api'
+import { bgm } from './bgm'
 import { FURNITURE_TABLE } from '../data/furniture'
 import { usePlayerStore } from '../store/playerStore'
 import { usePetStore } from '../store/petStore'
@@ -1402,16 +1403,18 @@ export function buildRadio(root: Root, game: GameState) {
   // ── Socket ──
   const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
   const socket = io(BASE_URL+'/radio', { transports:['websocket','polling'] })
-  let currentStationIdx = 0
+  let currentStationIdx = bgm.radioStation
   const audio = new Audio()
-  audio.volume = 0.6
+  audio.volume = bgm.volume
+  audio.muted = bgm.muted
 
-  function loadStation(idx: number) {
+  function loadStation(idx: number, save = true) {
     currentStationIdx = idx
     const s = RADIO_STATIONS[idx]
     if (!s) return
     audio.src = s.url
     audio.play().catch(() => {})
+    if (save) bgm.setRadioStation(idx)
     updateRadioUI()
   }
 
@@ -1431,8 +1434,17 @@ export function buildRadio(root: Root, game: GameState) {
     socket.emit('join', { id:game.playerId, name:currentPet.name, species:currentPet.species, level:currentPet.lv })
   })
 
+  // サーバーから同期された局を受け取る（入室時は自分のDB保存値を優先）
+  let firstStation = true
   socket.on('station', ({ index }: { index: number }) => {
-    if (index !== currentStationIdx) loadStation(index)
+    if (firstStation) {
+      // 入室時は自分のDB保存局を使い、サーバーに通知
+      firstStation = false
+      loadStation(currentStationIdx, false)
+      socket.emit('change_station', { index: currentStationIdx })
+    } else if (index !== currentStationIdx) {
+      loadStation(index, false)
+    }
   })
 
   socket.on('players', (players: PeerData[]) => {
@@ -1511,8 +1523,8 @@ export function buildRadio(root: Root, game: GameState) {
     </div>
     <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
       <span style="font-size:11px; color:#aaa;">音量</span>
-      <input id="radioVol" type="range" min="0" max="1" step="0.05" value="0.6" style="flex:1; accent-color:#ff88cc;" />
-      <button id="radioMute" style="background:none; border:none; color:#ccc; cursor:pointer; font-size:16px;" title="ミュート">🔊</button>
+      <input id="radioVol" type="range" min="0" max="1" step="0.05" value="${bgm.volume}" style="flex:1; accent-color:#ff88cc;" />
+      <button id="radioMute" style="background:none; border:none; color:#ccc; cursor:pointer; font-size:16px;" title="ミュート">${bgm.muted ? '🔇' : '🔊'}</button>
     </div>
     <div id="radioCount" style="margin-top:8px; font-size:11px; color:#aaa;">● 1 人がリスニング中</div>
   `
@@ -1526,14 +1538,17 @@ export function buildRadio(root: Root, game: GameState) {
   })
 
   const volSlider = radioPanel.querySelector<HTMLInputElement>('#radioVol')!
-  volSlider.addEventListener('input', () => { audio.volume = parseFloat(volSlider.value) })
+  volSlider.addEventListener('input', () => {
+    const v = parseFloat(volSlider.value)
+    audio.volume = v
+    bgm.setVolume(v)
+  })
 
-  let muted = false
   const muteBtn = radioPanel.querySelector<HTMLElement>('#radioMute')!
   muteBtn.addEventListener('click', () => {
-    muted = !muted
-    audio.muted = muted
-    muteBtn.textContent = muted ? '🔇' : '🔊'
+    const m = bgm.toggleMute()
+    audio.muted = m
+    muteBtn.textContent = m ? '🔇' : '🔊'
   })
 
   // ── チャットドック ──

@@ -24,5 +24,6 @@ try { db.exec("CREATE INDEX IF NOT EXISTS idx_board_scene ON board_posts(scene, 
 try { db.exec("CREATE TABLE IF NOT EXISTS player_settings (player_id TEXT PRIMARY KEY, bgm_volume REAL NOT NULL DEFAULT 0.03, bgm_muted INTEGER NOT NULL DEFAULT 0, bgm_scene TEXT NOT NULL DEFAULT '{}')") } catch {}
 try { db.exec("ALTER TABLE players ADD COLUMN dungeon_floor INTEGER NOT NULL DEFAULT 1") } catch {}
 try { db.exec("ALTER TABLE players ADD COLUMN dungeon_wins INTEGER NOT NULL DEFAULT 0") } catch {}
+try { db.exec("ALTER TABLE player_settings ADD COLUMN radio_station INTEGER NOT NULL DEFAULT 0") } catch {}
 
 export default db

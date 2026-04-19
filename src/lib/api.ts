@@ -122,13 +122,13 @@ export async function postBoard(scene: string, playerId: string, message: string
   return res.json()
 }
 
-export async function fetchSettings(playerId: string): Promise<{ bgm_volume: number; bgm_muted: boolean; bgm_scene: Record<string, string> }> {
+export async function fetchSettings(playerId: string): Promise<{ bgm_volume: number; bgm_muted: boolean; bgm_scene: Record<string, string>; radio_station: number }> {
   const res = await fetch(`${BASE}/api/settings/${playerId}`)
-  if (!res.ok) return { bgm_volume: 0.03, bgm_muted: false, bgm_scene: {} }
+  if (!res.ok) return { bgm_volume: 0.03, bgm_muted: false, bgm_scene: {}, radio_station: 0 }
   return res.json()
 }
 
-export async function saveSettings(playerId: string, settings: { bgm_volume: number; bgm_muted: boolean; bgm_scene: Record<string, string> }) {
+export async function saveSettings(playerId: string, settings: { bgm_volume: number; bgm_muted: boolean; bgm_scene: Record<string, string>; radio_station?: number }) {
   await fetch(`${BASE}/api/settings/${playerId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
