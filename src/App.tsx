@@ -99,9 +99,7 @@ export default function App() {
     function rescale() {
       const frame = document.querySelector<HTMLElement>('.mg-frame')
       if (!frame) return
-      const sx = window.innerWidth  / 1280
-      const sy = window.innerHeight / 800
-      const s  = Math.min(sx, sy, 1.5)
+      const s = Math.min(window.innerWidth / 1280, window.innerHeight / 800)
       frame.style.transform = `scale(${s})`
     }
     window.addEventListener('resize', rescale)
