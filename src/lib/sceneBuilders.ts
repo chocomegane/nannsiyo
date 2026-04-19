@@ -300,7 +300,7 @@ export function buildPark(root: Root, game: GameState) {
 
   // 目標地点ベースの自然な歩行状態
   const X_MIN = 120, X_MAX = 960
-  const Y_MIN = 360, Y_MAX = 480  // 草地〜砂利道の範囲
+  const Y_MIN = 410, Y_MAX = 470  // 地面付近のみ
 
   type WanderState = {
     x: number; y: number
