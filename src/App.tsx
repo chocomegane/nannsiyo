@@ -36,6 +36,7 @@ export default function App() {
         if (data) {
           applyState(data)
           playerIdRef.current = savedId
+          bgm.loadFromDb(savedId)
           setLoggedIn(true)
         } else {
           localStorage.removeItem(PLAYER_ID_KEY)
@@ -83,6 +84,7 @@ export default function App() {
         usePetStore.setState((s) => ({ pet: { ...s.pet, name: petName, species: petSpecies, eatCount: {} } }))
       }
     }
+    bgm.loadFromDb(playerId)
     setLoggedIn(true)
   }
 

@@ -107,6 +107,35 @@ export async function fetchRanking(): Promise<{ id: string; name: string; money:
   return res.json()
 }
 
+export async function fetchBoard(scene: string): Promise<{ id: string; player_name: string; message: string; created_at: string }[]> {
+  const res = await fetch(`${BASE}/api/board/${scene}`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function postBoard(scene: string, playerId: string, message: string) {
+  const res = await fetch(`${BASE}/api/board/${scene}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playerId, message }),
+  })
+  return res.json()
+}
+
+export async function fetchSettings(playerId: string): Promise<{ bgm_volume: number; bgm_muted: boolean; bgm_scene: Record<string, string> }> {
+  const res = await fetch(`${BASE}/api/settings/${playerId}`)
+  if (!res.ok) return { bgm_volume: 0.03, bgm_muted: false, bgm_scene: {} }
+  return res.json()
+}
+
+export async function saveSettings(playerId: string, settings: { bgm_volume: number; bgm_muted: boolean; bgm_scene: Record<string, string> }) {
+  await fetch(`${BASE}/api/settings/${playerId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  })
+}
+
 export async function playLottery(playerId: string, type: string): Promise<{ ok: boolean; result: unknown } | { error: string }> {
   const res = await fetch(`${BASE}/api/lottery/play`, {
     method: 'POST',

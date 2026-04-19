@@ -1,7 +1,7 @@
 import { createPetCanvas } from './pixelpet'
 import type { Species } from '../types'
 import type { GameState } from './sceneGame'
-import { fetchRanking, playLottery } from './api'
+import { fetchRanking, playLottery, fetchBoard, postBoard } from './api'
 import { FURNITURE_TABLE } from '../data/furniture'
 import { usePlayerStore } from '../store/playerStore'
 import { io } from 'socket.io-client'
@@ -15,6 +15,75 @@ function el(tag: string, cls?: string, html?: string): HTMLElement {
   return e
 }
 
+
+// ── 掲示板モーダル ────────────────────────────────────────────────────────────
+function openBoard(root: Root, scene: string, game: GameState) {
+  if (root.querySelector('#boardModal')) return
+
+  const overlay = el('div','')
+  overlay.id = 'boardModal'
+  overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;'
+
+  const panel = el('div','panel')
+  panel.style.cssText = 'width:480px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;padding:20px;background:var(--paper);border:2px solid var(--ink);border-radius:16px;box-shadow:6px 6px 0 var(--ink);'
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <b style="font-size:16px;">📋 掲示板</b>
+      <button id="boardClose" style="font-size:18px;background:none;border:none;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div id="boardPosts" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;min-height:120px;max-height:400px;"></div>
+    <div style="display:flex;gap:8px;">
+      <input id="boardInput" type="text" maxlength="200" placeholder="メッセージ（200文字まで）"
+        style="flex:1;padding:8px 12px;border:2px solid var(--ink);border-radius:8px;font-family:inherit;font-size:13px;" />
+      <button class="btn primary" id="boardSend">投稿</button>
+    </div>
+  `
+  overlay.appendChild(panel)
+  root.appendChild(overlay)
+
+  const postsEl = panel.querySelector<HTMLElement>('#boardPosts')!
+  const input   = panel.querySelector<HTMLInputElement>('#boardInput')!
+
+  function renderPosts(posts: { player_name: string; message: string; created_at: string }[]) {
+    if (posts.length === 0) {
+      postsEl.innerHTML = '<div style="color:var(--ink-2);font-size:13px;text-align:center;padding:24px;">まだ書き込みがありません</div>'
+      return
+    }
+    postsEl.innerHTML = posts.map(p => {
+      const d = new Date(p.created_at)
+      const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+      return `<div style="background:var(--paper-2);border:1.5px solid var(--ink);border-radius:10px;padding:8px 12px;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-2);margin-bottom:3px;">
+          <b>${p.player_name}</b><span>${dateStr}</span>
+        </div>
+        <div style="font-size:13px;word-break:break-all;">${p.message.replace(/</g,'&lt;')}</div>
+      </div>`
+    }).join('')
+  }
+
+  fetchBoard(scene).then(renderPosts)
+
+  async function sendPost() {
+    const msg = input.value.trim()
+    if (!msg) return
+    input.value = ''
+    await postBoard(scene, game.playerId, msg)
+    fetchBoard(scene).then(renderPosts)
+  }
+
+  panel.querySelector('#boardSend')!.addEventListener('click', sendPost)
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') sendPost() })
+  panel.querySelector('#boardClose')!.addEventListener('click', () => overlay.remove())
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove() })
+}
+
+function addBoardButton(root: Root, scene: string, game: GameState) {
+  const btn = el('button','btn')
+  btn.textContent = '📋 掲示板'
+  btn.style.cssText = 'position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;'
+  btn.addEventListener('click', () => openBoard(root, scene, game))
+  root.appendChild(btn)
+}
 
 function showStatusBubble(parent: HTMLElement, x: number, y: number, game: GameState): HTMLElement {
   const p = game.pet
@@ -249,6 +318,8 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     st.textContent = `@keyframes float{0%,100%{transform:translate(-50%,-50%) translateY(0)}50%{transform:translate(-50%,-50%) translateY(-5px)}} @keyframes emote{from{transform:translateX(-50%) translateY(0);opacity:0}30%{opacity:1}to{transform:translateX(-50%) translateY(-50px);opacity:0}}`
     document.head.appendChild(st)
   }
+
+  addBoardButton(root, 'room', game)
 }
 
 // ── PARK ──────────────────────────────────────────────────────────────────
@@ -521,6 +592,8 @@ export function buildPark(root: Root, game: GameState) {
   })
   chatSend.addEventListener('click', sendChat)
 
+  addBoardButton(root, 'park', game)
+
   // ── クリーンアップ ──
   ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
     socket.disconnect()
@@ -666,6 +739,8 @@ export function buildDungeon(root: Root, game: GameState, showScene: (k: string)
     }
     if (!root.isConnected) clearInterval(atk)
   }, 100)
+
+  addBoardButton(root, 'dungeon', game)
 }
 
 // ── LOTTERY ────────────────────────────────────────────────────────────────
@@ -816,6 +891,8 @@ export function buildLottery(root: Root, game: GameState) {
       }, 60)
     })
   })
+
+  addBoardButton(root, 'lottery', game)
 }
 
 // ── RANKING ────────────────────────────────────────────────────────────────
@@ -909,6 +986,8 @@ export function buildRanking(root: Root, game: GameState) {
         : '<div>ランキング圏外</div>'
     }
   })
+
+  addBoardButton(root, 'ranking', game)
 }
 
 // ── FURNITURE ──────────────────────────────────────────────────────────────
@@ -964,6 +1043,7 @@ export function buildFurniture(root: Root, game: GameState) {
     })
   }
   renderGrid()
+  addBoardButton(root, 'furniture', game)
 }
 
 // ── FRIEND ROOM ────────────────────────────────────────────────────────────

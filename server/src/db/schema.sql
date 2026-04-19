@@ -83,3 +83,20 @@ CREATE INDEX IF NOT EXISTS idx_sell_history_player  ON sell_history(player_id);
 CREATE INDEX IF NOT EXISTS idx_players_money        ON players(money DESC);
 CREATE INDEX IF NOT EXISTS idx_friends_player       ON friends(player_id);
 CREATE INDEX IF NOT EXISTS idx_friends_friend       ON friends(friend_id);
+
+CREATE TABLE IF NOT EXISTS board_posts (
+  id         TEXT    PRIMARY KEY,
+  scene      TEXT    NOT NULL,
+  player_id  TEXT    NOT NULL REFERENCES players(id),
+  player_name TEXT   NOT NULL,
+  message    TEXT    NOT NULL,
+  created_at TEXT    NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_board_scene ON board_posts(scene, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS player_settings (
+  player_id   TEXT PRIMARY KEY REFERENCES players(id),
+  bgm_volume  REAL NOT NULL DEFAULT 0.03,
+  bgm_muted   INTEGER NOT NULL DEFAULT 0,
+  bgm_scene   TEXT NOT NULL DEFAULT '{}'
+);

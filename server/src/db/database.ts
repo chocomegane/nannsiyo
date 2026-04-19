@@ -19,5 +19,8 @@ try { db.exec("ALTER TABLE pets ADD COLUMN eat_count TEXT NOT NULL DEFAULT '{}'"
 try { db.exec("ALTER TABLE players ADD COLUMN total_earned INTEGER NOT NULL DEFAULT 0") } catch {}
 try { db.exec("ALTER TABLE players ADD COLUMN battle_wins INTEGER NOT NULL DEFAULT 0") } catch {}
 try { db.exec("ALTER TABLE players ADD COLUMN items_collected INTEGER NOT NULL DEFAULT 0") } catch {}
+try { db.exec("CREATE TABLE IF NOT EXISTS board_posts (id TEXT PRIMARY KEY, scene TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL, message TEXT NOT NULL, created_at TEXT NOT NULL)") } catch {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_board_scene ON board_posts(scene, created_at DESC)") } catch {}
+try { db.exec("CREATE TABLE IF NOT EXISTS player_settings (player_id TEXT PRIMARY KEY, bgm_volume REAL NOT NULL DEFAULT 0.03, bgm_muted INTEGER NOT NULL DEFAULT 0, bgm_scene TEXT NOT NULL DEFAULT '{}')") } catch {}
 
 export default db

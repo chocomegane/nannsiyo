@@ -9,6 +9,8 @@ import eventsRouter from './routes/events'
 import authRouter from './routes/auth'
 import guildsRouter from './routes/guilds'
 import friendsRouter from './routes/friends'
+import boardRouter from './routes/board'
+import settingsRouter from './routes/settings'
 import { registerParkHandlers } from './sockets/park'
 import { registerDungeonHandlers } from './sockets/dungeon'
 
@@ -29,6 +31,8 @@ app.use('/api/events', eventsRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/guilds', guildsRouter)
 app.use('/api/friends', friendsRouter)
+app.use('/api/board', boardRouter)
+app.use('/api/settings', settingsRouter)
 app.get('/health', (_req: import('express').Request, res: import('express').Response) => res.json({ ok: true }))
 
 registerParkHandlers(io)

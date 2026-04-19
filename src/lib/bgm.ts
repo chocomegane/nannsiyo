@@ -1,4 +1,5 @@
 import type { Scene } from '../types'
+import { fetchSettings, saveSettings } from './api'
 
 export interface BgmTrack { label: string; src: string }
 
@@ -22,19 +23,41 @@ const DEFAULT_INDEX: Partial<Record<Scene, number>> = {
   room: 0, furniture: 0, park: 1, dungeon: 2, lottery: 3, ranking: 4,
 }
 
-const STORAGE_KEY = 'bgm_scene_src'
-
-function loadOverrides(): Partial<Record<Scene, string>> {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } catch { return {} }
-}
-
 class BgmManager {
   private audio: HTMLAudioElement | null = null
   private currentSrc = ''
   private pendingSrc = ''
-  private overrides: Partial<Record<Scene, string>> = loadOverrides()
+  private overrides: Partial<Record<Scene, string>> = {}
+  private saveTimer: ReturnType<typeof setTimeout> | null = null
+  private playerId: string | null = null
   muted = false
   volume = 0.03
+
+  // ログイン後にDBから設定を読み込む
+  async loadFromDb(playerId: string) {
+    this.playerId = playerId
+    const s = await fetchSettings(playerId)
+    this.volume = s.bgm_volume
+    this.muted = s.bgm_muted
+    this.overrides = s.bgm_scene as Partial<Record<Scene, string>>
+    if (this.audio) {
+      this.audio.volume = this.volume
+      this.audio.muted = this.muted
+    }
+  }
+
+  private scheduleSave() {
+    if (!this.playerId) return
+    if (this.saveTimer) clearTimeout(this.saveTimer)
+    this.saveTimer = setTimeout(() => {
+      if (!this.playerId) return
+      saveSettings(this.playerId, {
+        bgm_volume: this.volume,
+        bgm_muted: this.muted,
+        bgm_scene: this.overrides as Record<string, string>,
+      })
+    }, 800)
+  }
 
   getSrc(scene: Scene): string {
     if (this.overrides[scene]) return this.overrides[scene]!
@@ -44,7 +67,7 @@ class BgmManager {
 
   setSceneBgm(scene: Scene, src: string) {
     this.overrides[scene] = src
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.overrides))
+    this.scheduleSave()
   }
 
   play(scene: Scene) {
@@ -84,12 +107,14 @@ class BgmManager {
   toggleMute() {
     this.muted = !this.muted
     if (this.audio) this.audio.muted = this.muted
+    this.scheduleSave()
     return this.muted
   }
 
   setVolume(val: number) {
     this.volume = val
     if (this.audio) this.audio.volume = val
+    this.scheduleSave()
   }
 }
 
