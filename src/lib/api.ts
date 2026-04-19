@@ -100,3 +100,18 @@ export async function removeFriend(requestId: string) {
   const res = await fetch(`${BASE}/api/friends/${requestId}`, { method: 'DELETE' })
   return res.json()
 }
+
+export async function fetchRanking(): Promise<{ id: string; name: string; money: number; species: string | null; level: number | null }[]> {
+  const res = await fetch(`${BASE}/api/ranking`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function playLottery(playerId: string, type: string): Promise<{ ok: boolean; result: unknown } | { error: string }> {
+  const res = await fetch(`${BASE}/api/lottery/play`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playerId, type }),
+  })
+  return res.json()
+}

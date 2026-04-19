@@ -1,8 +1,10 @@
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
+import { useFurnitureStore } from '../store/furnitureStore'
 import type { DroppedItem } from '../types'
 
 export interface GameState {
+  playerId: string
   coin: number
   get droppedItems(): DroppedItem[]
   pet: {
@@ -22,15 +24,17 @@ export interface GameState {
   feedPet(): void
   petPet(): void
   inventoryTotal(): number
+  buyFurniture(furnitureId: string): boolean
   subscribe(cb: () => void): () => void
 }
 
-export function buildGameState(toastEl: HTMLElement | null): GameState {
+export function buildGameState(toastEl: HTMLElement | null, playerId: string): GameState {
   const pet = usePetStore.getState().pet
   const player = usePlayerStore.getState()
   const stage = pet.level >= 50 ? 3 : pet.level >= 20 ? 2 : 1
 
   return {
+    playerId,
     coin: player.money,
     get droppedItems() { return usePlayerStore.getState().droppedItems },
     pet: {
@@ -74,10 +78,14 @@ export function buildGameState(toastEl: HTMLElement | null): GameState {
     inventoryTotal() {
       return usePlayerStore.getState().inventory.reduce((s, i) => s + i.sellPrice, 0)
     },
+    buyFurniture(furnitureId: string) {
+      return useFurnitureStore.getState().buyFurniture(furnitureId)
+    },
     subscribe(cb: () => void) {
       const unsub1 = usePlayerStore.subscribe(cb)
       const unsub2 = usePetStore.subscribe(cb)
-      return () => { unsub1(); unsub2() }
+      const unsub3 = useFurnitureStore.subscribe(cb)
+      return () => { unsub1(); unsub2(); unsub3() }
     },
   }
 }

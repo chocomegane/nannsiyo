@@ -8,9 +8,11 @@ router.get('/', (_req, res) => {
   const ranking = db.prepare(`
     SELECT p.id, p.name, p.money,
            COALESCE(SUM(s.total_amount), 0) as total_earned,
-           COUNT(s.id) as sell_count
+           COUNT(s.id) as sell_count,
+           pe.species, pe.level
     FROM players p
     LEFT JOIN sell_history s ON s.player_id = p.id
+    LEFT JOIN pets pe ON pe.player_id = p.id
     GROUP BY p.id
     ORDER BY p.money DESC
     LIMIT 50

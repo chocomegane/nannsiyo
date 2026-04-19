@@ -4,6 +4,7 @@ import { createServer } from 'http'
 import { Server } from 'socket.io'
 import playersRouter from './routes/players'
 import rankingRouter from './routes/ranking'
+import lotteryRouter from './routes/lottery'
 import eventsRouter from './routes/events'
 import authRouter from './routes/auth'
 import guildsRouter from './routes/guilds'
@@ -23,6 +24,7 @@ app.use(express.json())
 
 app.use('/api/players', playersRouter)
 app.use('/api/ranking', rankingRouter)
+app.use('/api/lottery', lotteryRouter)
 app.use('/api/events', eventsRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/guilds', guildsRouter)

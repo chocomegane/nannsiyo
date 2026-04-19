@@ -1,6 +1,9 @@
 import { createPetCanvas } from './pixelpet'
 import type { Species } from '../types'
 import type { GameState } from './sceneGame'
+import { fetchRanking, playLottery } from './api'
+import { FURNITURE_TABLE } from '../data/furniture'
+import { usePlayerStore } from '../store/playerStore'
 
 type Root = HTMLElement
 
@@ -559,61 +562,85 @@ export function buildLottery(root: Root, game: GameState) {
   `
   grid.appendChild(pC)
 
-  function prize(r: number) {
-    return r<0.01 ? {n:'🏆 大当たり',g:5000} : r<0.1 ? {n:'🎊 中当たり',g:1000} : r<0.4 ? {n:'🎉 小当たり',g:200} : {n:'😢 ハズレ',g:0}
+  async function callLottery(type: string): Promise<{ ok: boolean; result: unknown } | { error: string }> {
+    return playLottery(game.playerId, type)
   }
 
-  pA.querySelector<HTMLElement>('[data-act="garapon"]')!.addEventListener('click', () => {
-    if (game.coin<100) { game.toast('コイン不足'); return }
-    game.setCoin(game.coin-100)
+  function syncCoin() {
+    game.coin = usePlayerStore.getState().money
+    usePlayerStore.setState({ money: game.coin })
+  }
+
+  pA.querySelector<HTMLElement>('[data-act="garapon"]')!.addEventListener('click', async () => {
+    if (game.coin < 100) { game.toast('コイン不足'); return }
     const drum = pA.querySelector<HTMLElement>('.drum')!
     drum.style.transform = `rotate(${720+Math.random()*360}deg)`
-    const p = prize(Math.random())
-    setTimeout(() => { game.toast(`${p.n} ${p.g?'+'+p.g+'G':''}`); if (p.g) game.setCoin(game.coin+p.g); setTimeout(()=>drum.style.transform='rotate(0deg)', 1500) }, 1000)
-  })
-  pA.querySelector<HTMLElement>('[data-act="garapon10"]')!.addEventListener('click', () => {
-    if (game.coin<1000) { game.toast('コイン不足'); return }
-    game.setCoin(game.coin-1000)
-    let total=0; for(let i=0;i<10;i++) total+=prize(Math.random()).g
-    game.setCoin(game.coin+total); game.toast(`🎁 10連結果: +${total}G`)
+    const res = await callLottery('garapon')
+    setTimeout(() => { drum.style.transform = 'rotate(0deg)' }, 1500)
+    if ('error' in res) { game.toast(res.error); return }
+    const r = (res as { result: { label: string; prize: number } }).result
+    game.toast(`${r.label}${r.prize ? ' +'+r.prize+'G' : ''}`)
+    game.setCoin(usePlayerStore.getState().money - 100 + r.prize)
+    syncCoin()
   })
 
-  pB.querySelector<HTMLElement>('[data-act="scratch"]')!.addEventListener('click', () => {
-    if (game.coin<100) { game.toast('コイン不足'); return }
-    game.setCoin(game.coin-100)
-    scratchReveal = Array.from({length:6}, ()=>symbols[Math.floor(Math.random()*symbols.length)])
-    pB.querySelectorAll<HTMLElement>('.sc-cell').forEach(c => { c.style.background='#9a8f85'; c.textContent='?'; delete (c.dataset as Record<string,unknown>).done })
+  pA.querySelector<HTMLElement>('[data-act="garapon10"]')!.addEventListener('click', async () => {
+    if (game.coin < 1000) { game.toast('コイン不足'); return }
+    const res = await callLottery('garapon10')
+    if ('error' in res) { game.toast(res.error); return }
+    const r = (res as { result: { totalPrize: number } }).result
+    game.toast(`🎁 10連結果: +${r.totalPrize}G`)
+    game.setCoin(usePlayerStore.getState().money - 1000 + r.totalPrize)
+    syncCoin()
   })
+
+  pB.querySelector<HTMLElement>('[data-act="scratch"]')!.addEventListener('click', async () => {
+    if (game.coin < 100) { game.toast('コイン不足'); return }
+    const res = await callLottery('scratch')
+    if ('error' in res) { game.toast(res.error); return }
+    const r = (res as { result: { cards: string[]; prize: number } }).result
+    scratchReveal = r.cards
+    pB.querySelectorAll<HTMLElement>('.sc-cell').forEach(c => {
+      c.style.background = '#9a8f85'; c.textContent = '?'
+      delete (c.dataset as Record<string,unknown>).done
+    })
+    if (r.prize > 0) game.toast(`🎊 3つそろい！ +${r.prize}G`)
+    game.setCoin(usePlayerStore.getState().money - 100 + r.prize)
+    syncCoin()
+  })
+
   pB.querySelectorAll<HTMLElement>('.sc-cell').forEach(c => {
     c.addEventListener('click', () => {
       if (c.dataset.done) return
-      c.dataset.done='y'; const i=parseInt(c.dataset.i!,10)
-      c.style.background='var(--paper-2)'; c.style.color='var(--ink)'; c.textContent=scratchReveal[i]
-      const revealed = pB.querySelectorAll('.sc-cell[data-done]')
-      if (revealed.length===6) {
-        const counts: Record<string,number>={}
-        scratchReveal.forEach(s=>counts[s]=(counts[s]||0)+1)
-        if (Math.max(...Object.values(counts))>=3) { game.toast('🎊 3つそろい！ +1,000G'); game.setCoin(game.coin+1000) }
-      }
+      c.dataset.done = 'y'
+      const i = parseInt(c.dataset.i!, 10)
+      c.style.background = 'var(--paper-2)'; c.style.color = 'var(--ink)'
+      c.textContent = scratchReveal[i]
     })
   })
 
-  pC.querySelector<HTMLElement>('[data-act="spin"]')!.addEventListener('click', () => {
-    if (game.coin<100) { game.toast('コイン不足'); return }
-    game.setCoin(game.coin-100)
+  pC.querySelector<HTMLElement>('[data-act="spin"]')!.addEventListener('click', async () => {
+    if (game.coin < 100) { game.toast('コイン不足'); return }
+    const spinBtn = pC.querySelector<HTMLButtonElement>('[data-act="spin"]')!
+    spinBtn.disabled = true
     const reels = pC.querySelectorAll<HTMLElement>('.reel')
-    const result = Array.from({length:3}, ()=>symbols[Math.floor(Math.random()*symbols.length)])
-    reels.forEach((r,i) => {
-      let n=0; const steps=20+i*10
-      const tick = setInterval(()=>{
-        r.textContent=symbols[Math.floor(Math.random()*symbols.length)]; n++
-        if (n>=steps) {
-          clearInterval(tick); r.textContent=result[i]
-          if (i===2) {
-            const [a,b,c] = Array.from(reels).map(r=>r.textContent)
-            if (a===b&&b===c) { game.toast('🏆 ALL MATCH! +5,000G'); game.setCoin(game.coin+5000) }
-            else if (a===b||b===c) { game.toast('🎉 2つそろい +200G'); game.setCoin(game.coin+200) }
+    const symbols = ['💎','🪙','⭐','🔔','🍀','🐉']
+    const res = await callLottery('slot')
+    if ('error' in res) { game.toast(res.error); spinBtn.disabled = false; return }
+    const r = (res as { result: { reels: string[]; prize: number } }).result
+    reels.forEach((reel, i) => {
+      let n = 0; const steps = 20 + i * 10
+      const tick = setInterval(() => {
+        reel.textContent = symbols[Math.floor(Math.random() * symbols.length)]; n++
+        if (n >= steps) {
+          clearInterval(tick); reel.textContent = r.reels[i]
+          if (i === 2) {
+            if (r.prize === 5000) game.toast('🏆 ALL MATCH! +5,000G')
+            else if (r.prize === 200) game.toast('🎉 2つそろい +200G')
             else game.toast('😢 ハズレ')
+            game.setCoin(usePlayerStore.getState().money - 100 + r.prize)
+            syncCoin()
+            spinBtn.disabled = false
           }
         }
       }, 60)
@@ -630,63 +657,98 @@ export function buildRanking(root: Root, game: GameState) {
   hdr.innerHTML = `
     <div>
       <div style="font-size:20px; font-weight:700;">🏆 所持金ランキング</div>
-      <div style="font-size:11px; color:var(--ink-2);">全 2,431 人</div>
-    </div>
-    <div style="display:flex; gap:8px;">
-      <button class="btn primary">全体</button>
-      <button class="btn">フレンド</button>
-      <button class="btn">ギルド</button>
-      <button class="btn">週間</button>
+      <div id="rankCount" style="font-size:11px; color:var(--ink-2);">読み込み中...</div>
     </div>
   `
   root.appendChild(hdr)
 
   const content = el('div')
-  content.style.cssText = 'position:absolute; top:80px; left:16px; right:16px; bottom:16px; display:grid; grid-template-columns:1fr 320px; gap:16px;'
+  content.style.cssText = 'position:absolute; top:70px; left:16px; right:16px; bottom:16px; display:grid; grid-template-columns:1fr 320px; gap:16px;'
   root.appendChild(content)
 
-  const podium = el('div')
-  podium.style.cssText = 'display:flex; gap:16px; align-items:flex-end; justify-content:center; padding-top:40px;'
-  const top3 = [
-    {rank:1, name:'ほのお', species:'dragon',  stage:3, gold:129800},
-    {rank:2, name:'りり',  species:'unicorn', stage:3, gold:82410},
-    {rank:3, name:'ごん',  species:'golem',   stage:2, gold:64200},
-  ]
-  const heights: Record<number,number> = {1:280,2:220,3:180}
-  const colors:  Record<number,string> = {1:'#f5e4b3',2:'#dbe8dd',3:'#f0d5b0'}
-  const medals:  Record<number,string> = {1:'🥇',2:'🥈',3:'🥉'}
-  ;[2,1,3].forEach(r => {
-    const p = top3.find(x=>x.rank===r)!
-    const col = el('div','panel')
-    col.style.cssText = `width:200px; height:${heights[r]}px; background:${colors[r]}; padding:12px; display:flex; flex-direction:column; align-items:center; gap:6px;`
-    col.innerHTML = `<div style="font-size:40px;">${medals[r]}</div>`
-    col.appendChild(createPetCanvas(p.species as Species, p.stage, 96))
-    const info = el('div','',`<div style="font-weight:700; font-size:14px;">${p.name}</div><div style="margin-top:4px; font-family:'Press Start 2P'; font-size:12px;">${p.gold.toLocaleString()} G</div>`)
-    col.appendChild(info)
-    podium.appendChild(col)
-  })
   const leftCol = el('div')
-  leftCol.appendChild(podium)
-
-  const list = el('div','panel')
-  list.style.cssText = 'margin-top:20px; padding:10px 14px; background:var(--paper); max-height:240px; overflow-y:auto;'
-  list.innerHTML = [[4,'くろ',42100],[5,'あん',38900],[6,'ぴこ',35500],[7,'わた',30220],[8,'れい',28400]].map((r) =>
-    `<div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--ink-3); font-size:13px;"><span><b>#${r[0]}</b> &nbsp; ${r[1]}</span><span style="font-family:'Press Start 2P';font-size:11px;">${(r[2] as number).toLocaleString()} G</span></div>`
-  ).join('') + `<div style="display:flex; justify-content:space-between; padding:6px 14px; font-size:13px; background:#f5e4b3; margin:6px -14px -10px; border-top:2px solid var(--accent);"><span><b>#42</b> &nbsp; あなた</span><span style="font-family:'Press Start 2P';font-size:11px;">${game.coin.toLocaleString()} G</span></div>`
-  leftCol.appendChild(list)
+  leftCol.style.cssText = 'display:flex; flex-direction:column; gap:16px; overflow:hidden;'
   content.appendChild(leftCol)
 
+  const podiumWrap = el('div')
+  podiumWrap.style.cssText = 'display:flex; gap:16px; align-items:flex-end; justify-content:center; padding-top:20px; flex:1;'
+  leftCol.appendChild(podiumWrap)
+
+  const listWrap = el('div','panel')
+  listWrap.style.cssText = 'padding:10px 14px; background:var(--paper); overflow-y:auto; max-height:200px;'
+  leftCol.appendChild(listWrap)
+
   const side = el('div','panel')
-  side.style.cssText = 'background:var(--paper); padding:14px;'
-  side.innerHTML = `<div style="font-weight:700; font-size:14px; margin-bottom:10px;">🎖 実績</div>
-    ${[['🥇','初めての金貨','解除済み'],['💰','お金持ち','解除済み'],['💎','大富豪','10,000G'],['⭐','Lv.5達成','解除済み'],['📦','コレクター','64/100']].map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px dashed var(--ink-3);opacity:${a[2]==='解除済み'?1:0.7}"><div style="font-size:22px;">${a[0]}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${a[1]}</div><div style="font-size:10px;color:var(--ink-2)">${a[2]}</div></div>${a[2]==='解除済み'?'<span style="color:var(--accent-2);font-size:14px;">✔</span>':''}</div>`).join('')}
+  side.style.cssText = 'background:var(--paper); padding:14px; overflow-y:auto;'
+  side.innerHTML = `<div style="font-weight:700; font-size:14px; margin-bottom:10px;">🎖 あなたの記録</div>
+    <div id="myRecord" style="font-size:13px; color:var(--ink-2);">読み込み中...</div>
   `
   content.appendChild(side)
+
+  const heights: Record<number,number> = {1:260,2:200,3:160}
+  const colors:  Record<number,string> = {1:'#f5e4b3',2:'#dbe8dd',3:'#f0d5b0'}
+  const medals:  Record<number,string> = {1:'🥇',2:'🥈',3:'🥉'}
+
+  fetchRanking().then(ranking => {
+    if (!root.isConnected) return
+    const countEl = root.querySelector<HTMLElement>('#rankCount')
+    if (countEl) countEl.textContent = `全 ${ranking.length} 人`
+
+    const top3 = ranking.slice(0, 3)
+    const rest  = ranking.slice(3)
+
+    // Podium
+    const order = [1, 0, 2] // 2位, 1位, 3位の順で表示
+    order.forEach(idx => {
+      const p = top3[idx]
+      if (!p) return
+      const rank = idx + 1
+      const species = (p.species ?? 'dragon') as Species
+      const level = p.level ?? 1
+      const stage = level >= 50 ? 3 : level >= 20 ? 2 : 1
+      const col = el('div','panel')
+      col.style.cssText = `width:180px; height:${heights[rank]}px; background:${colors[rank]}; padding:10px; display:flex; flex-direction:column; align-items:center; gap:4px; flex-shrink:0;`
+      const medalEl = el('div','',`<div style="font-size:32px;">${medals[rank]}</div>`)
+      col.appendChild(medalEl)
+      col.appendChild(createPetCanvas(species, stage, 80))
+      const info = el('div','',`<div style="font-weight:700; font-size:13px; margin-top:4px;">${p.name}</div><div style="font-family:'Press Start 2P'; font-size:10px; margin-top:2px;">${p.money.toLocaleString()} G</div>`)
+      info.style.textAlign = 'center'
+      col.appendChild(info)
+      podiumWrap.appendChild(col)
+    })
+
+    // List (4位以降)
+    const myRank = ranking.findIndex(r => r.id === game.playerId) + 1
+    listWrap.innerHTML = rest.map((r, i) =>
+      `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed var(--ink-3); font-size:12px; ${r.id===game.playerId?'background:#f5e4b3;margin:0 -14px;padding:5px 14px;':''}">
+        <span><b>#${i+4}</b> &nbsp; ${r.name}</span>
+        <span style="font-family:'Press Start 2P';font-size:10px;">${r.money.toLocaleString()} G</span>
+      </div>`
+    ).join('')
+
+    // My record
+    const myData = ranking.find(r => r.id === game.playerId)
+    const myRecordEl = root.querySelector<HTMLElement>('#myRecord')
+    if (myRecordEl) {
+      myRecordEl.innerHTML = myData
+        ? `<div style="padding:8px; background:var(--paper-2); border-radius:8px; margin-bottom:8px;">
+            <div style="font-weight:700;">あなたのランク</div>
+            <div style="font-size:20px; font-weight:700; color:var(--accent); margin:4px 0;">#${myRank}</div>
+            <div style="font-family:'Press Start 2P'; font-size:11px;">${myData.money.toLocaleString()} G</div>
+          </div>`
+        : '<div>ランキング圏外</div>'
+    }
+  })
 }
 
 // ── FURNITURE ──────────────────────────────────────────────────────────────
 export function buildFurniture(root: Root, game: GameState) {
   root.style.background = 'var(--paper)'
+
+  const SLOT_LABEL: Record<string, string> = {
+    'floor-left':'床左', 'floor-center':'床中央', 'floor-right':'床右',
+    'wall-left':'壁左', 'wall-center':'壁中央', 'wall-right':'壁右',
+  }
 
   const hdr = el('div')
   hdr.style.cssText = 'position:absolute; top:16px; left:16px; right:16px; display:flex; justify-content:space-between; align-items:center;'
@@ -695,10 +757,7 @@ export function buildFurniture(root: Root, game: GameState) {
       <div style="font-size:20px; font-weight:700;">🛋️ インテリアショップ</div>
       <div style="font-size:11px; color:var(--ink-2);">お部屋をもっとかわいく</div>
     </div>
-    <div style="display:flex; gap:6px;">
-      <button class="btn primary">すべて</button>
-      <button class="btn">床</button><button class="btn">壁</button><button class="btn">新着</button>
-    </div>
+    <div id="furniMoney" style="font-family:'Press Start 2P'; font-size:13px;">🪙 ${game.coin.toLocaleString()} G</div>
   `
   root.appendChild(hdr)
 
@@ -706,29 +765,35 @@ export function buildFurniture(root: Root, game: GameState) {
   grid.style.cssText = 'position:absolute; top:76px; left:16px; right:16px; bottom:16px; display:grid; grid-template-columns:repeat(5,1fr); grid-template-rows:repeat(2,1fr); gap:12px;'
   root.appendChild(grid)
 
-  const items: [string, string, number, string][] = [
-    ['🪴','観葉植物',100,'床左'],['🪔','ランプ',150,'床左'],['🧸','ぬいぐるみ',180,'床右'],
-    ['🟥','カーペット',200,'床中央'],['📚','本棚',250,'壁左'],['🕰️','時計',280,'壁中央'],
-    ['🖼️','絵画',300,'壁右'],['📺','テレビ',350,'壁左'],['🐠','水槽',400,'壁右'],['🛋️','ソファ',500,'床右'],
-  ]
-  items.forEach(it => {
-    const c = el('div','panel')
-    c.style.cssText = 'background:var(--paper-2); padding:12px; display:flex; flex-direction:column; align-items:center; gap:6px;'
-    c.innerHTML = `
-      <div style="flex:1; width:100%; background:#fff; border:2px dashed var(--ink-3); border-radius:8px; display:grid; place-items:center; min-height:90px;">
-        <div style="font-size:52px;">${it[0]}</div>
-      </div>
-      <div style="font-weight:700; font-size:13px;">${it[1]}</div>
-      <div style="font-size:10px; color:var(--ink-2);">${it[3]}スロット</div>
-      <button class="btn primary" style="width:100%; padding:6px;">🪙 ${it[2]} G で購入</button>
-    `
-    c.querySelector<HTMLElement>('button')!.addEventListener('click', e => {
-      e.stopPropagation()
-      if (game.coin<it[2]) { game.toast('コインが足りません'); return }
-      game.setCoin(game.coin-it[2]); game.toast(`${it[0]} ${it[1]} を購入！`)
+  function renderGrid() {
+    grid.innerHTML = ''
+    FURNITURE_TABLE.forEach(it => {
+      const c = el('div','panel')
+      c.style.cssText = 'background:var(--paper-2); padding:12px; display:flex; flex-direction:column; align-items:center; gap:6px;'
+      const canAfford = game.coin >= it.price
+      c.innerHTML = `
+        <div style="flex:1; width:100%; background:#fff; border:2px dashed var(--ink-3); border-radius:8px; display:grid; place-items:center; min-height:80px;">
+          <div style="font-size:48px;">${it.emoji}</div>
+        </div>
+        <div style="font-weight:700; font-size:12px;">${it.name}</div>
+        <div style="font-size:10px; color:var(--ink-2);">${SLOT_LABEL[it.slot] ?? it.slot}</div>
+        <button class="btn primary" style="width:100%; padding:5px; font-size:12px; ${canAfford?'':'opacity:0.5;'}">
+          🪙 ${it.price} G
+        </button>
+      `
+      c.querySelector<HTMLElement>('button')!.addEventListener('click', e => {
+        e.stopPropagation()
+        const ok = game.buyFurniture(it.furnitureId)
+        if (!ok) { game.toast('コインが足りません'); return }
+        game.toast(`${it.emoji} ${it.name} を購入！`)
+        const moneyEl = root.querySelector<HTMLElement>('#furniMoney')
+        if (moneyEl) moneyEl.textContent = `🪙 ${usePlayerStore.getState().money.toLocaleString()} G`
+        renderGrid()
+      })
+      grid.appendChild(c)
     })
-    grid.appendChild(c)
-  })
+  }
+  renderGrid()
 }
 
 // ── FRIEND ROOM ────────────────────────────────────────────────────────────
