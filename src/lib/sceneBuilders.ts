@@ -4,6 +4,7 @@ import type { GameState } from './sceneGame'
 import { fetchRanking, playLottery } from './api'
 import { FURNITURE_TABLE } from '../data/furniture'
 import { usePlayerStore } from '../store/playerStore'
+import { io } from 'socket.io-client'
 
 type Root = HTMLElement
 
@@ -256,6 +257,7 @@ export function buildPark(root: Root, game: GameState) {
   const sky = { day:'linear-gradient(180deg,#c8e4f0 0%,#e8f4da 70%)', dusk:'linear-gradient(180deg,#f0a878 0%,#f5d290 80%)', night:'linear-gradient(180deg,#2a3058 0%,#4a4870 80%)' }[time]
   root.style.background = sky
 
+  // 背景SVG
   const svg = document.createElementNS('http://www.w3.org/2000/svg','svg')
   svg.setAttribute('viewBox','0 0 1080 600')
   svg.setAttribute('preserveAspectRatio','xMidYMax slice')
@@ -284,75 +286,192 @@ export function buildPark(root: Root, game: GameState) {
       <rect x="-40" y="-14" width="80" height="6" fill="#8a5a3a" stroke="#2a2420" stroke-width="1.5"/>
     </g>
     ${time!=='night' ? `<g opacity="0.9"><ellipse cx="200" cy="100" rx="38" ry="14" fill="#fff"/><ellipse cx="230" cy="92" rx="28" ry="12" fill="#fff"/><ellipse cx="800" cy="80" rx="44" ry="16" fill="#fff"/></g>` : ''}
-    ${time==='night' ? `<g>${Array.from({length:30}).map(()=>{const x=Math.random()*1080,y=Math.random()*250;return `<circle cx="${x}" cy="${y}" r="1.2" fill="#fff"/>`}).join('')}<circle cx="900" cy="120" r="28" fill="#f5e4b3" stroke="#2a2420"/></g>` : ''}
+    ${time==='night' ? `<g>${Array.from({length:30}).map((_,i)=>{const x=(i*137)%1080,y=(i*97)%250;return `<circle cx="${x}" cy="${y}" r="1.2" fill="#fff"/>`}).join('')}<circle cx="900" cy="120" r="28" fill="#f5e4b3" stroke="#2a2420"/></g>` : ''}
   `
   root.appendChild(svg)
 
   const petLayer = el('div')
-  petLayer.style.cssText = 'position:absolute; inset:0; pointer-events:none;'
+  petLayer.style.cssText = 'position:absolute; inset:0 0 92px 0; pointer-events:none;'
   root.appendChild(petLayer)
 
-  const others = [
-    { species:'unicorn', stage:2, name:'もふ', x:200, y:430, dx:0.3, player:'プレイヤーA', chat:'こんにちは〜' },
-    { species:'slime',   stage:1, name:'ぴこ', x:420, y:445, dx:-0.2, player:'プレイヤーB', chat:'(*ﾟーﾟ)' },
-    { species:'phoenix', stage:2, name:'フィフィ', x:720, y:420, dx:0.25, player:'プレイヤーC', chat: null as string | null },
-    { species:'golem',   stage:1, name:'ろく', x:860, y:440, dx:-0.15, player:'プレイヤーD', chat:'おっす' },
-  ]
-  const you = { species:game.pet.species, stage:game.pet.stage, name:game.pet.name, x:540, y:430, dx:0, isYou:true, player:'', chat: null as string | null }
-  const allPets = [you, ...others] as (typeof you & { el?: HTMLElement })[]
+  // ── ペット描画ヘルパー ──
+  const PET_SIZE = 80
+  type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
+  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; chatTimer?: ReturnType<typeof setTimeout> }>()
 
-  allPets.forEach((p) => {
-    const d = el('div')
-    const size = 96
-    d.style.cssText = `position:absolute; width:${size}px; height:${size}px; pointer-events:auto; cursor:pointer;`
-    d.appendChild(createPetCanvas(p.species as Species, p.stage, size))
-    const label = el('div')
-    label.style.cssText = `position:absolute; bottom:-4px; left:50%; transform:translateX(-50%); background:${p.isYou?'var(--accent)':'var(--paper)'}; color:${p.isYou?'#fff':'var(--ink)'}; border:1.5px solid var(--ink); border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; white-space:nowrap;`
-    label.textContent = p.name + (p.isYou ? ' (you)' : '')
-    d.appendChild(label)
-    if (p.chat) {
-      const bub = el('div')
-      bub.style.cssText = `position:absolute; bottom:${size+10}px; left:50%; transform:translateX(-50%); background:#fff; border:2px solid var(--ink); border-radius:10px; padding:5px 10px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap;`
-      bub.textContent = p.chat
-      d.appendChild(bub)
+  function stageFromLevel(lv: number) { return lv >= 50 ? 3 : lv >= 20 ? 2 : 1 }
+
+  function makePetWrapper(data: PeerData, isYou: boolean): HTMLElement {
+    const w = el('div')
+    w.style.cssText = `position:absolute; width:${PET_SIZE}px; display:flex; flex-direction:column; align-items:center; pointer-events:auto; cursor:pointer; user-select:none;`
+    const canvas = createPetCanvas(data.species as Species, stageFromLevel(data.level), PET_SIZE)
+    w.appendChild(canvas)
+    const lbl = el('div')
+    lbl.style.cssText = `background:${isYou?'var(--accent)':'var(--paper)'}; color:${isYou?'#fff':'var(--ink)'}; border:1.5px solid var(--ink); border-radius:8px; padding:1px 8px; font-size:11px; font-weight:700; white-space:nowrap; margin-top:2px;`
+    lbl.textContent = data.name + (isYou ? ' (you)' : '')
+    w.appendChild(lbl)
+
+    // ホバーでステータス表示
+    w.addEventListener('mouseenter', () => {
+      let bub = w.querySelector<HTMLElement>('.park-status')
+      if (bub) return
+      bub = el('div','park-status')
+      bub.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); background:#fff; border:2px solid var(--ink); border-radius:10px; padding:6px 12px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap; z-index:20; pointer-events:none;`
+      bub.innerHTML = `<b>${data.name}</b><br>Lv.${data.level} · ${data.species}`
+      w.appendChild(bub)
+    })
+    w.addEventListener('mouseleave', () => {
+      w.querySelector('.park-status')?.remove()
+    })
+    return w
+  }
+
+  function showChatBubble(wrapper: HTMLElement, message: string, chatTimer?: ReturnType<typeof setTimeout>) {
+    if (chatTimer) clearTimeout(chatTimer)
+    let bub = wrapper.querySelector<HTMLElement>('.chat-bub')
+    if (!bub) {
+      bub = el('div','chat-bub')
+      bub.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); background:#fff; border:2px solid var(--ink); border-radius:10px; padding:5px 10px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap; z-index:10; pointer-events:none;`
+      wrapper.insertBefore(bub, wrapper.firstChild)
     }
-    p.el = d
-    petLayer.appendChild(d)
+    bub.textContent = message
+    return setTimeout(() => bub?.remove(), 5000)
+  }
+
+  function setPetPos(wrapper: HTMLElement, x: number, y: number, bobOffset: number) {
+    wrapper.style.left = (x - PET_SIZE / 2) + 'px'
+    wrapper.style.top  = (y - PET_SIZE - bobOffset) + 'px'
+  }
+
+  // ── 自分のペット ──
+  const youData: PeerData = { id: game.playerId, name: game.pet.name, species: game.pet.species, level: game.pet.lv, x: 540, y: 420 }
+  const youWrapper = makePetWrapper(youData, true)
+  petLayer.appendChild(youWrapper)
+
+  // ── Socket.io接続 ──
+  const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
+  const socket = io(BASE_URL + '/park', { transports: ['websocket','polling'] })
+
+  socket.on('connect', () => {
+    socket.emit('join', { id: game.playerId, name: game.pet.name, species: game.pet.species, level: game.pet.lv, scene: 'park' })
   })
 
+  function updateCount() {
+    const countEl = root.querySelector<HTMLElement>('#parkCount')
+    if (countEl) countEl.textContent = `● オンライン ${peers.size + 1} 人`
+  }
+
+  socket.on('players', (players: PeerData[]) => {
+    players.forEach(p => {
+      if (p.id === game.playerId) return
+      const w = makePetWrapper(p, false)
+      petLayer.appendChild(w)
+      peers.set(p.id, { data: p, wrapper: w })
+    })
+    updateCount()
+  })
+
+  socket.on('player:join', (p: PeerData) => {
+    if (p.id === game.playerId || peers.has(p.id)) return
+    const w = makePetWrapper(p, false)
+    petLayer.appendChild(w)
+    peers.set(p.id, { data: p, wrapper: w })
+    updateCount()
+  })
+
+  socket.on('player:leave', ({ id }: { id: string }) => {
+    const peer = peers.get(id)
+    if (peer) { peer.wrapper.querySelectorAll('canvas').forEach((c: Element) => (c as HTMLCanvasElement & { destroy?: () => void }).destroy?.()); peer.wrapper.remove() }
+    peers.delete(id)
+    updateCount()
+  })
+
+  socket.on('player:move', ({ id, x, y }: { id: string; x: number; y: number }) => {
+    const peer = peers.get(id)
+    if (peer) { peer.data.x = x; peer.data.y = y }
+  })
+
+  socket.on('park:chat', ({ id, message }: { id: string; message: string }) => {
+    if (id === socket.id) {
+      const timer = showChatBubble(youWrapper, message)
+      void timer
+      return
+    }
+    const peer = Array.from(peers.values()).find(p => p.data.id === id)
+    if (peer) {
+      peer.chatTimer = showChatBubble(peer.wrapper, message, peer.chatTimer)
+    }
+  })
+
+  // ── アニメーションループ ──
   let rafId = 0
+  let lastMoveEmit = 0
+
   function tick() {
     const now = performance.now()
-    allPets.forEach(p => {
-      if (!p.isYou) { p.x += p.dx; if (p.x < 60 || p.x > 1000) p.dx *= -1 }
-      if (p.el) { p.el.style.left = (p.x-48)+'px'; p.el.style.top = (p.y-50-Math.sin(now/500+p.x)*2)+'px' }
+    const bob = Math.sin(now / 500) * 3
+
+    // 自分
+    setPetPos(youWrapper, youData.x, youData.y, bob)
+
+    // 他プレイヤー
+    peers.forEach(peer => {
+      setPetPos(peer.wrapper, peer.data.x, peer.data.y, Math.sin(now / 500 + peer.data.x * 0.01) * 3)
     })
+
+    // move を 100ms ごとに送信
+    if (now - lastMoveEmit > 100) {
+      socket.emit('move', { x: youData.x, y: youData.y })
+      lastMoveEmit = now
+    }
+
     rafId = requestAnimationFrame(tick)
   }
   rafId = requestAnimationFrame(tick)
 
+  // ── キーボード移動 ──
+  const keyState = new Set<string>()
   const keyHandler = (e: KeyboardEvent) => {
-    if (e.key==='ArrowLeft')  you.x -= 14
-    if (e.key==='ArrowRight') you.x += 14
-    you.x = Math.max(60, Math.min(1000, you.x))
+    if ((e.target as HTMLElement).tagName === 'INPUT') return
+    if (e.key === 'ArrowLeft')  { youData.x -= 16; e.preventDefault() }
+    if (e.key === 'ArrowRight') { youData.x += 16; e.preventDefault() }
+    youData.x = Math.max(60, Math.min(1000, youData.x))
   }
   window.addEventListener('keydown', keyHandler)
+  void keyState
 
+  // ── チャットドック ──
   const chatDock = el('div')
-  chatDock.style.cssText = `position:absolute; left:16px; right:16px; bottom:16px; height:76px; background:var(--paper-2); border:2px solid var(--ink); border-radius:14px; box-shadow:4px 4px 0 var(--ink); padding:10px 14px; z-index:10;`
+  chatDock.style.cssText = `position:absolute; left:16px; right:16px; bottom:16px; height:60px; background:var(--paper-2); border:2px solid var(--ink); border-radius:14px; box-shadow:4px 4px 0 var(--ink); padding:0 14px; z-index:10; display:flex; align-items:center; gap:10px;`
   chatDock.innerHTML = `
-    <div style="display:flex; align-items:center; gap:10px; height:100%;">
-      <span style="font-weight:700;">💬 チャット</span>
-      <span style="color:var(--ink-2); font-size:11px">(← → で移動 / 60文字まで)</span>
-      <input type="text" maxlength="60" placeholder="メッセージを入力…" style="flex:1; padding:8px 12px; border:2px solid var(--ink); border-radius:8px; font-family:inherit; font-size:13px; background:#fff;" />
-      <button class="btn primary">送信</button>
-      <span style="color:var(--ink-2); font-size:11px">● オンライン</span>
-    </div>
+    <span style="font-weight:700; font-size:13px;">💬 チャット</span>
+    <span style="color:var(--ink-2); font-size:11px;">(← → で移動 / 60文字まで)</span>
+    <input id="chatInput" type="text" maxlength="60" placeholder="メッセージを入力…" style="flex:1; padding:8px 12px; border:2px solid var(--ink); border-radius:8px; font-family:inherit; font-size:13px; background:#fff;" />
+    <button class="btn primary" id="chatSend">送信</button>
+    <span id="parkCount" style="color:var(--ink-2); font-size:11px;">● オンライン 1 人</span>
   `
   root.appendChild(chatDock)
-  chatDock.querySelector('input')!.addEventListener('keydown', e => e.stopPropagation())
 
+  const chatInput = chatDock.querySelector<HTMLInputElement>('#chatInput')!
+  const chatSend  = chatDock.querySelector<HTMLButtonElement>('#chatSend')!
+
+  function sendChat() {
+    const msg = chatInput.value.trim()
+    if (!msg) return
+    socket.emit('chat', msg)
+    showChatBubble(youWrapper, msg)
+    chatInput.value = ''
+  }
+
+  chatInput.addEventListener('keydown', e => {
+    e.stopPropagation()
+    if (e.key === 'Enter') sendChat()
+  })
+  chatSend.addEventListener('click', sendChat)
+
+  // ── クリーンアップ ──
   ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
+    socket.disconnect()
     cancelAnimationFrame(rafId)
     window.removeEventListener('keydown', keyHandler)
   }
