@@ -44,12 +44,12 @@ router.put('/:id/state', (req, res) => {
     inventory: { id: string; itemId: string; name: string; sellPrice: number }[]
     foodInventory: { id: string; foodId: string; name: string; price: number }[]
     furniture: { id: string; furnitureId: string; name: string; placed: boolean }[]
-    stats?: { totalEarned: number; battleWins: number; itemsCollected: number }
+    stats?: { totalEarned: number; battleWins: number; itemsCollected: number; dungeonFloor: number; dungeonWins: number }
   }
   const now = new Date().toISOString()
 
-  db.prepare('UPDATE players SET name = ?, money = ?, total_earned = ?, battle_wins = ?, items_collected = ?, updated_at = ? WHERE id = ?')
-    .run(player.name, player.money, stats?.totalEarned ?? 0, stats?.battleWins ?? 0, stats?.itemsCollected ?? 0, now, req.params.id)
+  db.prepare('UPDATE players SET name = ?, money = ?, total_earned = ?, battle_wins = ?, items_collected = ?, dungeon_floor = ?, dungeon_wins = ?, updated_at = ? WHERE id = ?')
+    .run(player.name, player.money, stats?.totalEarned ?? 0, stats?.battleWins ?? 0, stats?.itemsCollected ?? 0, stats?.dungeonFloor ?? 1, stats?.dungeonWins ?? 0, now, req.params.id)
 
   db.prepare(`INSERT OR REPLACE INTO pets (id, player_id, name, species, level, exp, happiness, hunger, unlocked_skills, eat_count, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)

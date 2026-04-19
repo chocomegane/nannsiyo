@@ -647,6 +647,19 @@ export function buildPark(root: Root, game: GameState) {
 }
 
 // ── DUNGEON ────────────────────────────────────────────────────────────────
+const ENEMIES = [
+  { name:'スライムJr.',  emoji:'🟢', lv:1,  hp:40,  atk:4,  reward:80  },
+  { name:'コウモリ',      emoji:'🦇', lv:3,  hp:60,  atk:6,  reward:120 },
+  { name:'ゴブリン',      emoji:'👺', lv:5,  hp:90,  atk:9,  reward:180 },
+  { name:'オーク',        emoji:'👹', lv:8,  hp:130, atk:13, reward:260 },
+  { name:'スケルトン',    emoji:'💀', lv:12, hp:180, atk:17, reward:360 },
+  { name:'ダークウィザード',emoji:'🧙', lv:16, hp:240, atk:22, reward:480 },
+  { name:'ドラゴンゾンビ',emoji:'🐲', lv:22, hp:320, atk:28, reward:650 },
+  { name:'闇の騎士',      emoji:'⚔️', lv:30, hp:420, atk:35, reward:900 },
+  { name:'リッチ王',      emoji:'☠️', lv:40, hp:560, atk:44, reward:1200 },
+  { name:'魔王',          emoji:'😈', lv:50, hp:800, atk:60, reward:2000 },
+]
+
 export function buildDungeon(root: Root, game: GameState, showScene: (k: string) => void) {
   root.style.background = 'radial-gradient(circle at center, #3a3248 0%, #1d2026 100%)'
 
@@ -669,121 +682,228 @@ export function buildDungeon(root: Root, game: GameState, showScene: (k: string)
   `
   root.appendChild(svg)
 
+  // アニメーション定義
+  if (!document.getElementById('dungAnim')) {
+    const st = document.createElement('style'); st.id='dungAnim'
+    st.textContent = `@keyframes dmg{from{transform:translateY(0);opacity:0}20%{opacity:1}to{transform:translateY(-40px);opacity:0}} @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}`
+    document.head.appendChild(st)
+  }
+
+  // ── 状態 ──
+  let floor = game.getDungeonFloor()
+  let totalWins = game.getDungeonWins()
+  const enemyIdx = Math.min(Math.floor((floor - 1) / 3), ENEMIES.length - 1)
+  const baseEnemy = ENEMIES[enemyIdx]
+  const scaleF = 1 + (floor - 1) * 0.08
+  const enemyHp = { cur: Math.round(baseEnemy.hp * scaleF), max: Math.round(baseEnemy.hp * scaleF) }
+  const php = { cur: 100, max: 100 }
+  let defending = false
+  let battleOver = false
+
+  // ── UI ──
   const topbar = el('div')
   topbar.style.cssText = `position:absolute; top:16px; left:16px; right:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; z-index:5;`
-  topbar.innerHTML = `
-    <div class="panel" style="padding:8px 14px; background:var(--paper); font-weight:700;">🗺️ フロア <span style="color:var(--accent)">F3</span> · Wave <b>2/3</b></div>
-    <div class="panel" style="padding:8px 14px; background:var(--paper); font-size:12px;">累計勝利 <b>17</b> · 次のボスまで <b>3F</b></div>
-    <button class="btn" data-act="retreat">🏃 撤退</button>
-  `
   root.appendChild(topbar)
 
-  const enemyHp = { cur:82, max:120 }
+  function refreshTopbar() {
+    topbar.innerHTML = `
+      <div class="panel" style="padding:8px 14px; background:var(--paper); font-weight:700;">🗺️ フロア <span style="color:var(--accent)">F${floor}</span></div>
+      <div class="panel" style="padding:8px 14px; background:var(--paper); font-size:12px;">累計勝利 <b>${totalWins}</b></div>
+      <button class="btn" data-act="retreat">🏃 撤退</button>
+    `
+    topbar.querySelector<HTMLElement>('[data-act="retreat"]')!.addEventListener('click', () => {
+      game.toast('🏃 自室に戻ります')
+      setTimeout(() => showScene('room'), 600)
+    })
+  }
+  refreshTopbar()
+
+  // 敵ボックス
   const enemyBox = el('div')
-  enemyBox.style.cssText = `position:absolute; right:180px; top:160px; z-index:3; text-align:center; width:240px;`
-  enemyBox.innerHTML = `
-    <div style="font-size:100px; margin-bottom:8px;">👹</div>
-    <div style="color:#f5e4b3; font-weight:700; font-size:16px;">オーク Lv.8</div>
-    <div style="background:rgba(0,0,0,0.4); border:2px solid #f5e4b3; border-radius:8px; padding:4px; margin-top:6px; width:200px; margin-left:auto; margin-right:auto;">
-      <div style="height:10px; background:#2a2420; border-radius:4px; overflow:hidden;">
-        <div id="ehp" style="height:100%; background:#c8553d; width:${enemyHp.cur/enemyHp.max*100}%"></div>
-      </div>
-      <div style="color:#fff; font-size:10px; font-family:'Press Start 2P';">${enemyHp.cur}/${enemyHp.max}</div>
-    </div>
-  `
+  enemyBox.style.cssText = `position:absolute; right:180px; top:140px; z-index:3; text-align:center; width:240px;`
   root.appendChild(enemyBox)
 
+  function refreshEnemy() {
+    enemyBox.innerHTML = `
+      <div style="font-size:90px; margin-bottom:4px;">${baseEnemy.emoji}</div>
+      <div style="color:#f5e4b3; font-weight:700; font-size:15px;">${baseEnemy.name} Lv.${baseEnemy.lv + floor - 1}</div>
+      <div style="background:rgba(0,0,0,0.4); border:2px solid #f5e4b3; border-radius:8px; padding:4px; margin-top:6px; width:200px; margin-left:auto; margin-right:auto;">
+        <div style="height:10px; background:#2a2420; border-radius:4px; overflow:hidden;">
+          <div id="ehp" style="height:100%; background:#c8553d; width:${enemyHp.cur/enemyHp.max*100}%; transition:width 0.2s;"></div>
+        </div>
+        <div style="color:#fff; font-size:10px; font-family:'Press Start 2P';" id="ehpTxt">${enemyHp.cur}/${enemyHp.max}</div>
+      </div>
+    `
+  }
+  refreshEnemy()
+
+  // 自分のペット
   const petBox = el('div')
-  petBox.style.cssText = `position:absolute; left:180px; top:280px; z-index:3; text-align:center;`
+  petBox.style.cssText = `position:absolute; left:180px; top:260px; z-index:3; text-align:center;`
   petBox.appendChild(createPetCanvas(game.pet.species as Species, game.pet.stage, 160))
-  const petLabel = el('div','',`<div style="color:#f5e4b3; font-weight:700; font-size:16px;">${game.pet.name} (あなた)</div>`)
-  petBox.appendChild(petLabel)
+  petBox.appendChild(el('div','',`<div style="color:#f5e4b3; font-weight:700; font-size:15px;">${game.pet.name}</div>`))
   root.appendChild(petBox)
 
-  const php = { cur:92, max:100 }
+  // HP パネル
   const hpSide = el('div','panel')
   hpSide.style.cssText = `position:absolute; right:16px; bottom:140px; padding:12px; background:var(--paper); width:220px; z-index:4; font-size:13px;`
   hpSide.innerHTML = `
     <div style="font-weight:700; margin-bottom:6px;">あなたのペット</div>
     <div>HP <b id="phpTxt">${php.cur}/${php.max}</b></div>
-    <div class="bar" style="height:10px;"><span id="phpBar" style="background:#6b8e7f; width:${php.cur/php.max*100}%"></span></div>
+    <div class="bar" style="height:10px;"><span id="phpBar" style="background:#6b8e7f; width:100%; transition:width 0.2s;"></span></div>
     <div style="margin-top:10px; color:var(--ink-2); font-size:11px;">次の敵攻撃まで</div>
-    <div class="bar" style="height:6px;"><span id="atkBar" style="background:var(--accent-3); width:40%"></span></div>
+    <div class="bar" style="height:6px;"><span id="atkBar" style="background:var(--accent-3); width:0%"></span></div>
   `
   root.appendChild(hpSide)
 
+  // コマンドパネル
   const cmd = el('div','panel')
   cmd.style.cssText = `position:absolute; left:16px; right:250px; bottom:16px; padding:14px; background:var(--paper); display:grid; grid-template-columns:repeat(4,1fr); gap:10px; z-index:4;`
   cmd.innerHTML = `
     <button class="btn primary" style="padding:16px; font-size:14px;" data-cmd="attack"><span style="font-size:22px">⚔️</span> 攻撃</button>
     <button class="btn" style="padding:16px; font-size:14px;" data-cmd="skill"><span style="font-size:22px">✨</span> スキル</button>
-    <button class="btn" style="padding:16px; font-size:14px;" data-cmd="item"><span style="font-size:22px">🍎</span> アイテム</button>
+    <button class="btn" style="padding:16px; font-size:14px;" data-cmd="item"><span style="font-size:22px">🍎</span> 回復</button>
     <button class="btn" style="padding:16px; font-size:14px;" data-cmd="defend"><span style="font-size:22px">🛡️</span> 防御</button>
   `
   root.appendChild(cmd)
 
-  function showDmg(x: number, y: number, val: number, color='#c8553d') {
-    if (!document.getElementById('dungAnim')) {
-      const st = document.createElement('style'); st.id='dungAnim'
-      st.textContent = `@keyframes dmg{from{transform:translateY(0);opacity:0}20%{opacity:1}to{transform:translateY(-40px);opacity:0}} @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}`
-      document.head.appendChild(st)
-    }
+  function showDmg(x: number, y: number, val: number, color='#c8553d', prefix='-') {
     const d = el('div')
-    d.textContent = `-${val}`
-    d.style.cssText = `position:absolute; left:${x}px; top:${y}px; color:${color}; font-family:'Press Start 2P'; font-size:26px; text-shadow:2px 2px 0 #000; z-index:20; animation:dmg 1s forwards;`
+    d.textContent = `${prefix}${val}`
+    d.style.cssText = `position:absolute; left:${x}px; top:${y}px; color:${color}; font-family:'Press Start 2P'; font-size:26px; text-shadow:2px 2px 0 #000; z-index:20; animation:dmg 1s forwards; pointer-events:none;`
     root.appendChild(d)
     setTimeout(() => d.remove(), 1000)
   }
 
+  function updateHpUI() {
+    const bar = root.querySelector<HTMLElement>('#phpBar')
+    const txt = root.querySelector<HTMLElement>('#phpTxt')
+    if (bar) bar.style.width = (php.cur / php.max * 100) + '%'
+    if (txt) txt.textContent = `${php.cur}/${php.max}`
+  }
+
+  function updateEnemyHpUI() {
+    const bar = root.querySelector<HTMLElement>('#ehp')
+    const txt = root.querySelector<HTMLElement>('#ehpTxt')
+    if (bar) bar.style.width = (enemyHp.cur / enemyHp.max * 100) + '%'
+    if (txt) txt.textContent = `${enemyHp.cur}/${enemyHp.max}`
+  }
+
+  // ── 勝利処理 ──
+  function onVictory() {
+    battleOver = true
+    clearInterval(atkTimer)
+    floor++
+    totalWins++
+    const reward = Math.round(baseEnemy.reward * scaleF)
+    game.setCoin(game.coin + reward)
+    game.setDungeonFloor(floor)
+    game.setDungeonWins(totalWins)
+
+    const overlay = el('div')
+    overlay.style.cssText = `position:absolute; inset:0; background:rgba(0,0,0,0.6); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; gap:16px;`
+    overlay.innerHTML = `
+      <div style="font-size:48px;">🏆</div>
+      <div style="color:#f5e4b3; font-family:'Press Start 2P'; font-size:18px;">勝利！</div>
+      <div style="color:#d4a24c; font-size:14px;">+${reward}G 獲得 · F${floor}へ進む</div>
+      <button class="btn primary" id="nextFloor" style="font-size:15px; padding:12px 28px;">次のフロアへ ▶</button>
+    `
+    root.appendChild(overlay)
+    overlay.querySelector('#nextFloor')!.addEventListener('click', () => {
+      overlay.remove()
+      // 敵とフロアをリフレッシュ
+      const newIdx = Math.min(Math.floor((floor - 1) / 3), ENEMIES.length - 1)
+      const newEnemy = ENEMIES[newIdx]
+      const newScale = 1 + (floor - 1) * 0.08
+      enemyHp.cur = Math.round(newEnemy.hp * newScale)
+      enemyHp.max = enemyHp.cur
+      // 敵UIを更新
+      Object.assign(baseEnemy, newEnemy)
+      refreshEnemy()
+      refreshTopbar()
+      battleOver = false
+      defending = false
+      // インターバル再開
+      atkCd = 0
+      atkTimer = setInterval(enemyAttackTick, 100)
+    })
+  }
+
+  // ── 敗北処理（ペット死亡） ──
+  function onDefeat() {
+    battleOver = true
+    clearInterval(atkTimer)
+    game.setDungeonFloor(1)
+    game.setDungeonWins(0)
+    floor = 1
+    totalWins = 0
+
+    const overlay = el('div')
+    overlay.style.cssText = `position:absolute; inset:0; background:rgba(0,0,0,0.7); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; gap:16px;`
+    overlay.innerHTML = `
+      <div style="font-size:48px;">💀</div>
+      <div style="color:#c8553d; font-family:'Press Start 2P'; font-size:18px;">倒れた…</div>
+      <div style="color:#f5e4b3; font-size:13px;">ダンジョン進行度がリセットされました</div>
+      <button class="btn" id="goRoom" style="font-size:14px; padding:10px 24px;">自室に戻る</button>
+    `
+    root.appendChild(overlay)
+    overlay.querySelector('#goRoom')!.addEventListener('click', () => showScene('room'))
+  }
+
+  // ── 敵の攻撃タイマー ──
+  let atkCd = 0
+  function enemyAttackTick() {
+    if (battleOver) return
+    atkCd += 2
+    const bar = root.querySelector<HTMLElement>('#atkBar')
+    if (bar) bar.style.width = atkCd + '%'
+    if (atkCd >= 100) {
+      atkCd = 0
+      const rawDmg = Math.round(baseEnemy.atk * scaleF)
+      const dmg = defending ? Math.max(1, Math.round(rawDmg * 0.4)) : rawDmg
+      defending = false
+      php.cur = Math.max(0, php.cur - dmg)
+      updateHpUI()
+      showDmg(280, 300, dmg, '#fff')
+      petBox.style.animation = 'shake 0.3s'; setTimeout(() => petBox.style.animation = '', 300)
+      if (php.cur <= 0) onDefeat()
+    }
+    if (!root.isConnected) clearInterval(atkTimer)
+  }
+  let atkTimer = setInterval(enemyAttackTick, 100)
+
+  // ── プレイヤーコマンド ──
   cmd.addEventListener('click', (e) => {
+    if (battleOver) return
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-cmd]')
     if (!b) return
     const act = b.dataset.cmd
-    if (act==='attack') {
-      const dmg = 10+Math.floor(Math.random()*20)
-      enemyHp.cur = Math.max(0, enemyHp.cur-dmg)
-      root.querySelector<HTMLElement>('#ehp')!.style.width = (enemyHp.cur/enemyHp.max*100)+'%'
-      showDmg(780, 220, dmg)
-      enemyBox.style.animation='shake 0.3s'; setTimeout(()=>enemyBox.style.animation='', 300)
-      if (enemyHp.cur<=0) { game.toast('🏆 勝利！ +150G +XP40'); game.setCoin(game.coin+150) }
-    } else if (act==='item') {
-      php.cur = Math.min(php.max, php.cur+30)
-      root.querySelector<HTMLElement>('#phpBar')!.style.width=(php.cur/php.max*100)+'%'
-      root.querySelector<HTMLElement>('#phpTxt')!.textContent=`${php.cur}/${php.max}`
-      game.toast('🍎 回復薬を使った (+30HP)')
-    } else if (act==='skill') {
-      enemyHp.cur = Math.max(0, enemyHp.cur-35)
-      root.querySelector<HTMLElement>('#ehp')!.style.width=(enemyHp.cur/enemyHp.max*100)+'%'
-      showDmg(800, 200, 35, '#d4a24c')
-      game.toast('🔥 火炎ブレス！')
-    } else if (act==='defend') {
-      game.toast('🛡️ 防御の構え')
+    if (act === 'attack') {
+      const petAtk = 8 + game.pet.lv * 2
+      const dmg = petAtk + Math.floor(Math.random() * petAtk * 0.5)
+      enemyHp.cur = Math.max(0, enemyHp.cur - dmg)
+      updateEnemyHpUI()
+      showDmg(750, 200, dmg)
+      enemyBox.style.animation = 'shake 0.3s'; setTimeout(() => enemyBox.style.animation = '', 300)
+      if (enemyHp.cur <= 0) onVictory()
+    } else if (act === 'skill') {
+      const dmg = 20 + game.pet.lv * 4
+      enemyHp.cur = Math.max(0, enemyHp.cur - dmg)
+      updateEnemyHpUI()
+      showDmg(750, 180, dmg, '#d4a24c')
+      game.toast('✨ スキル発動！')
+      if (enemyHp.cur <= 0) onVictory()
+    } else if (act === 'item') {
+      const heal = 30
+      php.cur = Math.min(php.max, php.cur + heal)
+      updateHpUI()
+      showDmg(300, 280, heal, '#6b8e7f', '+')
+      game.toast('🍎 回復！ +30HP')
+    } else if (act === 'defend') {
+      defending = true
+      game.toast('🛡️ 防御の構え（次の攻撃を60%軽減）')
     }
   })
-
-  topbar.querySelector<HTMLElement>('[data-act="retreat"]')!.addEventListener('click', () => {
-    game.toast('🏃 自室に戻ります')
-    setTimeout(() => showScene('room'), 600)
-  })
-
-  let atkCd = 0
-  const atk = setInterval(() => {
-    atkCd += 2
-    const bar = root.querySelector<HTMLElement>('#atkBar')
-    if (bar) bar.style.width = atkCd+'%'
-    if (atkCd >= 100) {
-      atkCd = 0
-      const dmg = 5+Math.floor(Math.random()*12)
-      php.cur = Math.max(0, php.cur-dmg)
-      const pbar = root.querySelector<HTMLElement>('#phpBar')
-      const ptxt = root.querySelector<HTMLElement>('#phpTxt')
-      if (pbar) pbar.style.width=(php.cur/php.max*100)+'%'
-      if (ptxt) ptxt.textContent=`${php.cur}/${php.max}`
-      showDmg(280, 320, dmg, '#fff')
-      petBox.style.animation='shake 0.3s'; setTimeout(()=>petBox.style.animation='', 300)
-    }
-    if (!root.isConnected) clearInterval(atk)
-  }, 100)
 
   addBoardButton(root, 'dungeon', game)
 }

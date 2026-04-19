@@ -25,6 +25,10 @@ export interface GameState {
   petPet(): void
   inventoryTotal(): number
   buyFurniture(furnitureId: string): boolean
+  getDungeonFloor(): number
+  setDungeonFloor(f: number): void
+  getDungeonWins(): number
+  setDungeonWins(w: number): void
   subscribe(cb: () => void): () => void
 }
 
@@ -83,6 +87,10 @@ export function buildGameState(toastEl: HTMLElement | null, playerId: string): G
     buyFurniture(furnitureId: string) {
       return useFurnitureStore.getState().buyFurniture(furnitureId)
     },
+    getDungeonFloor() { return usePlayerStore.getState().dungeonFloor ?? 1 },
+    setDungeonFloor(f: number) { usePlayerStore.setState({ dungeonFloor: f }) },
+    getDungeonWins() { return usePlayerStore.getState().dungeonWins ?? 0 },
+    setDungeonWins(w: number) { usePlayerStore.setState({ dungeonWins: w }) },
     subscribe(cb: () => void) {
       const unsub1 = usePlayerStore.subscribe(cb)
       const unsub2 = usePetStore.subscribe(cb)

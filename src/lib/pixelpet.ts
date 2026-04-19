@@ -16,6 +16,16 @@ export const PAL: Record<Species, Palette> = {
   slime:   { body:'#6bbf7a', light:'#a6e0b2', dark:'#2e6b3a', belly:'#c4f0cf', eye:'#2a2420', white:'#fff' },
   phoenix: { body:'#d4a24c', light:'#f0cf7a', dark:'#8a5a1a', belly:'#f5e4b3', eye:'#2a2420', beak:'#c8553d', white:'#fff' },
   golem:   { body:'#8a8578', light:'#b5b0a0', dark:'#4a463c', belly:'#d0cab8', eye:'#e8c670', crystal:'#7a6cab', white:'#fff' },
+  fox:     { body:'#e07840', light:'#f0a870', dark:'#8a3a10', belly:'#f5e4b3', eye:'#2a2420', white:'#fff' },
+  cat:     { body:'#b8a0d8', light:'#d0c0e8', dark:'#6a5098', belly:'#f0eaf8', eye:'#4a9060', white:'#fff' },
+  bunny:   { body:'#f0e0f0', light:'#ffffff', dark:'#c0a0c0', belly:'#fff0ff', eye:'#e85080', white:'#fff' },
+  penguin: { body:'#2a2e3a', light:'#4a5060', dark:'#12161e', belly:'#f5f0e0', eye:'#2a2420', beak:'#f0a030', white:'#fff' },
+  wolf:    { body:'#8890a0', light:'#b0b8c8', dark:'#404850', belly:'#e8e4dc', eye:'#c8a830', white:'#fff' },
+  bear:    { body:'#8a6040', light:'#b08060', dark:'#4a3020', belly:'#d4b890', eye:'#2a2420', white:'#fff' },
+  panda:   { body:'#f0f0f0', light:'#ffffff', dark:'#1a1a1a', belly:'#f8f8f8', eye:'#2a2420', white:'#fff' },
+  tiger:   { body:'#e09030', light:'#f0b860', dark:'#8a4010', belly:'#f5e8d0', eye:'#2a2420', white:'#fff' },
+  fairy:   { body:'#e070c0', light:'#f0a0d8', dark:'#903080', belly:'#ffe0f0', eye:'#4040c0', crystal:'#80d0ff', white:'#fff' },
+  ghost:   { body:'#c0d0e8', light:'#e0ecf8', dark:'#8090b0', belly:'#f0f4fc', eye:'#6060c0', white:'#fff' },
 }
 
 type Grid = string[][]
@@ -200,6 +210,212 @@ function tinyGolem(stage: number): Grid {
   return S
 }
 
+// ── 新種族共通: 丸っこいベースシルエット ──────────────────────────────────
+function tinyRound(stage: number, earsFn?: (put: Put) => void, faceFn?: (put: Put, S: Grid) => void): Grid {
+  const S = makeGrid(); const put = makePut(S)
+  const r = stage === 1 ? 7 : stage === 2 ? 8.5 : 10
+  const cx = 16, cy = stage === 1 ? 18 : stage === 2 ? 17 : 16
+  for (let y = 4; y < 30; y++) for (let x = 4; x < 28; x++) {
+    const dx = x - cx, dy = y - cy
+    if (dx * dx + dy * dy * 1.2 < r * r) put(x, y, 'b')
+  }
+  // ベリー
+  for (let y = cy; y < cy + r - 1; y++) for (let x = cx - 3; x < cx + 4; x++) if (S[y]?.[x] === 'b') put(x, y, 'y')
+  // ライトハイライト
+  for (let x = cx - 3; x < cx; x++) if (S[cy - 3]?.[x] === 'b') put(x, cy - 3, 'l')
+  // 目
+  put(cx - 3, cy - 2, 'e'); put(cx - 2, cy - 2, 'w')
+  put(cx + 2, cy - 2, 'e'); put(cx + 3, cy - 2, 'w')
+  // 足
+  put(cx - 4, cy + Math.round(r) - 1, 'b'); put(cx - 3, cy + Math.round(r) - 1, 'b')
+  put(cx + 2, cy + Math.round(r) - 1, 'b'); put(cx + 3, cy + Math.round(r) - 1, 'b')
+  if (earsFn) earsFn(put)
+  if (faceFn) faceFn(put, S)
+  return S
+}
+
+function tinyFox(stage: number): Grid {
+  const S = tinyRound(stage,
+    put => { // 三角耳
+      const cy = stage === 1 ? 11 : 10
+      put(11, cy); put(12, cy - 1); put(13, cy - 2); put(13, cy)
+      put(18, cy); put(19, cy - 1); put(20, cy - 2); put(20, cy)
+      put(12, cy, 'l'); put(19, cy, 'l')
+    },
+    (put, S) => { // 白マズル
+      const cy = stage === 1 ? 19 : 18
+      for (let x = 14; x < 19; x++) if (S[cy]?.[x] === 'b' || S[cy]?.[x] === 'y') put(x, cy, 'l')
+      put(16, cy - 1, 'd') // 鼻
+    }
+  )
+  // しっぽ（大きく）
+  const tail = makePut(S)
+  for (let y = 20; y < 28; y++) for (let x = 22; x < 30; x++) {
+    const dx = x - 25, dy = y - 24; if (dx*dx + dy*dy < 14) tail(x, y, stage > 1 ? 'b' : 'd')
+  }
+  return S
+}
+
+function tinyCat(stage: number): Grid {
+  return tinyRound(stage,
+    put => { // 尖った耳
+      const cy = stage === 1 ? 10 : 9
+      put(11, cy); put(11, cy - 1); put(12, cy - 2)
+      put(20, cy); put(20, cy - 1); put(19, cy - 2)
+      put(12, cy, 'l'); put(19, cy, 'l')
+    },
+    put => {
+      const cy = stage === 1 ? 20 : 19
+      put(15, cy, 'd'); put(16, cy, 'd') // 鼻
+      put(14, cy + 1, 'd'); put(17, cy + 1, 'd') // ひげ
+    }
+  )
+}
+
+function tinyBunny(stage: number): Grid {
+  const S = tinyRound(stage,
+    put => { // 長い耳
+      const base = stage === 1 ? 10 : 8
+      for (let y = base; y > base - 7; y--) { put(13, y, 'b'); put(14, y, 'b'); put(13, y, 'b') }
+      for (let y = base; y > base - 7; y--) { put(17, y, 'b'); put(18, y, 'b') }
+      // 耳の内側
+      for (let y = base; y > base - 5; y--) { put(13, y, 'l'); put(17, y, 'l') }
+    }
+  )
+  return S
+}
+
+function tinyPenguin(stage: number): Grid {
+  const S = makeGrid(); const put = makePut(S)
+  const cy = stage === 1 ? 17 : 16
+  // 体（黒）
+  for (let y = 8; y < 28; y++) for (let x = 9; x < 23; x++) {
+    const dx = x - 16, dy = y - cy; if (dx*dx*1.2 + dy*dy < 70) put(x, y, 'b')
+  }
+  // お腹（白）
+  for (let y = 10; y < 26; y++) for (let x = 12; x < 20; x++) {
+    const dx = x - 16, dy = y - cy; if (dx*dx*2 + dy*dy < 40) put(x, y, 'y')
+  }
+  // くちばし
+  put(15, cy - 2, 'k'); put(16, cy - 2, 'k'); put(16, cy - 1, 'k')
+  // 目
+  put(13, cy - 3, 'e'); put(14, cy - 3, 'w')
+  put(18, cy - 3, 'e'); put(19, cy - 3, 'w')
+  // 羽
+  put(8, cy, 'b'); put(9, cy - 1, 'b'); put(9, cy + 1, 'b')
+  put(23, cy, 'b'); put(22, cy - 1, 'b'); put(22, cy + 1, 'b')
+  // 足
+  put(14, 27, 'k'); put(15, 27, 'k'); put(17, 27, 'k'); put(18, 27, 'k')
+  return S
+}
+
+function tinyWolf(stage: number): Grid {
+  return tinyRound(stage,
+    put => {
+      const cy = stage === 1 ? 10 : 9
+      put(11, cy); put(12, cy - 1); put(12, cy)
+      put(20, cy); put(19, cy - 1); put(19, cy)
+      put(11, cy, 'd'); put(20, cy, 'd')
+    },
+    (put, S) => {
+      const cy = stage === 1 ? 20 : 18
+      for (let x = 14; x < 19; x++) if (S[cy]?.[x]) put(x, cy, 'l')
+      put(16, cy - 1, 'd')
+      // 牙
+      put(14, cy + 1, 'w'); put(18, cy + 1, 'w')
+    }
+  )
+}
+
+function tinyBear(stage: number): Grid {
+  return tinyRound(stage,
+    put => {
+      const cy = stage === 1 ? 11 : 10
+      put(11, cy); put(12, cy); put(11, cy + 1)
+      put(19, cy); put(20, cy); put(20, cy + 1)
+      put(11, cy + 1, 'l'); put(20, cy + 1, 'l')
+    },
+    (put, S) => {
+      const cy = stage === 1 ? 20 : 19
+      for (let x = 14; x < 19; x++) if (S[cy]?.[x]) put(x, cy, 'l')
+      put(15, cy, 'd'); put(17, cy, 'd')
+    }
+  )
+}
+
+function tinyPanda(stage: number): Grid {
+  const S = tinyRound(stage,
+    put => {
+      const cy = stage === 1 ? 11 : 10
+      put(11, cy, 'd'); put(12, cy, 'd'); put(11, cy + 1, 'd')
+      put(19, cy, 'd'); put(20, cy, 'd'); put(20, cy + 1, 'd')
+    }
+  )
+  // 目のまわりを黒く
+  const put = makePut(S)
+  const ey = stage === 1 ? 16 : 15
+  for (let dx = -2; dx <= 0; dx++) { put(13 + dx, ey, 'd'); put(13 + dx, ey + 1, 'd') }
+  for (let dx = 0; dx <= 2; dx++) { put(18 + dx, ey, 'd'); put(18 + dx, ey + 1, 'd') }
+  put(13, ey, 'e'); put(18, ey, 'e')
+  put(14, ey, 'w'); put(19, ey, 'w')
+  return S
+}
+
+function tinyTiger(stage: number): Grid {
+  const S = tinyRound(stage,
+    put => {
+      const cy = stage === 1 ? 10 : 9
+      put(12, cy, 'b'); put(12, cy - 1, 'b')
+      put(19, cy, 'b'); put(19, cy - 1, 'b')
+    }
+  )
+  // 縦縞
+  const put = makePut(S)
+  for (let y = 10; y < 26; y++) {
+    if (S[y]?.[13] === 'b') put(13, y, 'd')
+    if (S[y]?.[16] === 'b') put(16, y, 'd')
+    if (S[y]?.[19] === 'b') put(19, y, 'd')
+  }
+  return S
+}
+
+function tinyFairy(stage: number): Grid {
+  const S = tinyRound(stage)
+  const put = makePut(S)
+  // 翼（クリスタル色）
+  const wy = stage === 1 ? 18 : 17
+  for (let y = wy - 4; y < wy + 3; y++) {
+    put(6, y, 'c'); put(7, y, 'c')
+    put(24, y, 'c'); put(25, y, 'c')
+  }
+  put(5, wy - 2, 'c'); put(5, wy - 1, 'c')
+  put(26, wy - 2, 'c'); put(26, wy - 1, 'c')
+  // キラキラ
+  put(4, wy - 4, 'c'); put(27, wy - 4, 'c')
+  put(3, wy - 2, 'c'); put(28, wy - 2, 'c')
+  return S
+}
+
+function tinyGhost(stage: number): Grid {
+  const S = makeGrid(); const put = makePut(S)
+  const cy = stage === 1 ? 15 : 14
+  const r = stage === 1 ? 8 : 10
+  // 上半球
+  for (let y = cy - r; y < cy; y++) for (let x = 8; x < 24; x++) {
+    const dx = x - 16, dy = y - cy; if (dx*dx + dy*dy < r*r) put(x, y, 'b')
+  }
+  // 胴体（四角め）
+  for (let y = cy; y < cy + r; y++) for (let x = 8; x < 24; x++) put(x, y, 'b')
+  // 裾のウェーブ
+  for (let x = 8; x < 24; x += 3) { put(x, cy + r, 'b'); put(x + 1, cy + r, 'b') }
+  // 目（大きめ）
+  put(12, cy - 2, 'e'); put(13, cy - 2, 'e'); put(12, cy - 1, 'e'); put(13, cy - 1, 'w')
+  put(18, cy - 2, 'e'); put(19, cy - 2, 'e'); put(18, cy - 1, 'e'); put(19, cy - 1, 'w')
+  // ハイライト
+  for (let x = 12; x < 20; x++) if (S[cy - r + 1]?.[x] === 'b') put(x, cy - r + 1, 'l')
+  return S
+}
+
 export function getSprite(species: Species, stage: number): Grid {
   switch (species) {
     case 'dragon':  return tinyDragon(stage)
@@ -207,6 +423,16 @@ export function getSprite(species: Species, stage: number): Grid {
     case 'slime':   return tinySlime(stage)
     case 'phoenix': return tinyPhoenix(stage)
     case 'golem':   return tinyGolem(stage)
+    case 'fox':     return tinyFox(stage)
+    case 'cat':     return tinyCat(stage)
+    case 'bunny':   return tinyBunny(stage)
+    case 'penguin': return tinyPenguin(stage)
+    case 'wolf':    return tinyWolf(stage)
+    case 'bear':    return tinyBear(stage)
+    case 'panda':   return tinyPanda(stage)
+    case 'tiger':   return tinyTiger(stage)
+    case 'fairy':   return tinyFairy(stage)
+    case 'ghost':   return tinyGhost(stage)
   }
 }
 

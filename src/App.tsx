@@ -63,9 +63,9 @@ export default function App() {
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       const pet = usePetStore.getState().pet
-      const { playerName, money, inventory, foodInventory, totalEarned, battleWins, itemsCollected } = usePlayerStore.getState()
+      const { playerName, money, inventory, foodInventory, totalEarned, battleWins, itemsCollected, dungeonFloor, dungeonWins } = usePlayerStore.getState()
       const furniture = useFurnitureStore.getState().items
-      saveState(playerIdRef.current!, { player: { name: playerName, money }, pet, inventory, foodInventory, furniture, stats: { totalEarned, battleWins, itemsCollected } })
+      saveState(playerIdRef.current!, { player: { name: playerName, money }, pet, inventory, foodInventory, furniture, stats: { totalEarned, battleWins, itemsCollected, dungeonFloor, dungeonWins } })
     }, 2000)
   }
 
@@ -153,7 +153,7 @@ export default function App() {
 }
 
 function applyState(data: {
-  player: { name: string; money: number; total_earned?: number; battle_wins?: number; items_collected?: number }
+  player: { name: string; money: number; total_earned?: number; battle_wins?: number; items_collected?: number; dungeon_floor?: number; dungeon_wins?: number }
   pet: { id: string; name: string; species: string; level: number; exp: number; happiness: number; hunger: number; unlocked_skills: string; eat_count: string } | null
   inventory: { id: string; item_id: string; name: string; sell_price: number }[]
   foodInventory: { id: string; food_id: string; name: string; price: number }[]
@@ -166,6 +166,8 @@ function applyState(data: {
     totalEarned: player.total_earned ?? 0,
     battleWins: player.battle_wins ?? 0,
     itemsCollected: player.items_collected ?? 0,
+    dungeonFloor: player.dungeon_floor ?? 1,
+    dungeonWins: player.dungeon_wins ?? 0,
     inventory: inventory.map((i) => ({ id: i.id, itemId: i.item_id, name: i.name, sellPrice: i.sell_price, x: 10 + Math.random() * 75, y: 52 + Math.random() * 33 })),
     foodInventory: foodInventory.map((f) => ({ id: f.id, foodId: f.food_id, name: f.name, price: f.price })),
   })

@@ -8,11 +8,21 @@ interface Props {
 }
 
 const SPECIES_LIST: { species: Species; label: string; desc: string }[] = [
-  { species: 'dragon',  label: 'ドラゴン',     desc: 'ドロップが豪華！' },
-  { species: 'unicorn', label: 'ユニコーン',   desc: '機嫌が上がりやすい' },
-  { species: 'slime',   label: 'スライム',     desc: 'ドロップが早い！' },
-  { species: 'phoenix', label: 'フェニックス', desc: '高レアが出やすい' },
-  { species: 'golem',   label: 'ゴーレム',     desc: '安定したドロップ' },
+  { species: 'dragon',  label: 'ドラゴン',       desc: 'ドロップが豪華！' },
+  { species: 'unicorn', label: 'ユニコーン',     desc: '機嫌が上がりやすい' },
+  { species: 'slime',   label: 'スライム',       desc: 'ドロップが早い！' },
+  { species: 'phoenix', label: 'フェニックス',   desc: '高レアが出やすい' },
+  { species: 'golem',   label: 'ゴーレム',       desc: '安定したドロップ' },
+  { species: 'fox',     label: 'キツネ',         desc: 'ずる賢い！コイン運UP' },
+  { species: 'cat',     label: 'ネコ',           desc: 'なでると幸福UP大' },
+  { species: 'bunny',   label: 'ウサギ',         desc: 'ラッキードロップあり' },
+  { species: 'penguin', label: 'ペンギン',       desc: '氷属性アイテムが出る' },
+  { species: 'wolf',    label: 'オオカミ',       desc: 'ダンジョンに強い！' },
+  { species: 'bear',    label: 'クマ',           desc: 'ハチミツを量産する' },
+  { species: 'panda',   label: 'パンダ',         desc: 'のんびり系・長生き' },
+  { species: 'tiger',   label: 'トラ',           desc: '攻撃力が高い！' },
+  { species: 'fairy',   label: 'フェアリー',     desc: '魔法アイテムが出やすい' },
+  { species: 'ghost',   label: 'ゴースト',       desc: '夜に特別ドロップあり' },
 ]
 
 export default function LoginScreen({ onSuccess }: Props) {

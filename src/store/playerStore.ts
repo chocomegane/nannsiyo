@@ -13,6 +13,8 @@ interface PlayerState {
   totalEarned: number
   battleWins: number
   itemsCollected: number
+  dungeonFloor: number
+  dungeonWins: number
   addDroppedItem: (item: DroppedItem) => void
   collectItem: (id: string) => void
   sellAll: () => void
@@ -30,6 +32,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   totalEarned: 0,
   battleWins: 0,
   itemsCollected: 0,
+  dungeonFloor: 1,
+  dungeonWins: 0,
 
   addDroppedItem: (item) =>
     set((state) => ({ droppedItems: [...state.droppedItems, item] })),

@@ -1,4 +1,6 @@
 export type Species = 'dragon' | 'unicorn' | 'slime' | 'phoenix' | 'golem'
+  | 'fox' | 'cat' | 'bunny' | 'penguin' | 'wolf'
+  | 'bear' | 'panda' | 'tiger' | 'fairy' | 'ghost'
 
 export type SkillCategory = 'attack' | 'expression' | 'party' | 'item' | 'move' | 'support' | 'transform'
 
