@@ -29,9 +29,7 @@ export interface GameState {
 }
 
 export function buildGameState(toastEl: HTMLElement | null, playerId: string): GameState {
-  const pet = usePetStore.getState().pet
   const player = usePlayerStore.getState()
-  const stage = pet.level >= 50 ? 3 : pet.level >= 20 ? 2 : 1
 
   return {
     playerId,
