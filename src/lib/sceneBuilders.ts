@@ -1267,11 +1267,11 @@ export function buildFriendRoom(root: Root, game: GameState, showScene: (k: stri
 
 // ── RADIO ROOM ─────────────────────────────────────────────────────────────
 const RADIO_STATIONS = [
-  { name: 'Lofi Hip Hop',        emoji: '🎵', url: 'https://stream.zeno.fm/f3wvbbqmdg8uv' },
-  { name: 'Jazz & Blues',        emoji: '🎷', url: 'https://stream.zeno.fm/tsxbcqz4p7zuv' },
-  { name: 'Classic FM',          emoji: '🎻', url: 'https://media-ice.musicradio.com/ClassicFMMP3' },
-  { name: 'Chillout',            emoji: '🌊', url: 'https://stream.zeno.fm/yn65zsgyp7zuv' },
-  { name: 'J-Pop / Anime BGM',   emoji: '🌸', url: 'https://stream.zeno.fm/2p5g00q0q2zuv' },
+  { name: 'NHK ラジオ第1',       emoji: '📡', url: 'https://nhkradioakr1-i.akamaihd.net/hls/live/511929/1-r1/1-r1-01.m3u8' },
+  { name: 'NHK FM',              emoji: '🎵', url: 'https://nhkradioakfm-i.akamaihd.net/hls/live/512099/1-fm/1-fm-01.m3u8' },
+  { name: 'J-WAVE 81.3',         emoji: '🌸', url: 'https://mtist.as.smartstream.ne.jp/30012/livestream/playlist.m3u8' },
+  { name: 'interfm 89.7',        emoji: '🎷', url: 'https://mtist.as.smartstream.ne.jp/30014/livestream/playlist.m3u8' },
+  { name: 'Shibuya FM 78.4',     emoji: '🎶', url: 'https://mtist.as.smartstream.ne.jp/30026/livestream/playlist.m3u8' },
 ]
 
 export function buildRadio(root: Root, game: GameState) {
