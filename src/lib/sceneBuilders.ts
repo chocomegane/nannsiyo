@@ -299,45 +299,49 @@ export function buildPark(root: Root, game: GameState) {
   type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
 
   // 目標地点ベースの自然な歩行状態
+  const X_MIN = 120, X_MAX = 960
+  const Y_MIN = 360, Y_MAX = 480  // 草地〜砂利道の範囲
+
   type WanderState = {
     x: number; y: number
-    targetX: number
+    targetX: number; targetY: number
     speed: number      // px/frame
     idleUntil: number  // ms: この時刻まで停止
     facing: number     // 1=右 -1=左
     phase: number      // ボブ位相オフセット（rad）
   }
 
+  function randTarget() {
+    return { tx: X_MIN + Math.random() * (X_MAX - X_MIN), ty: Y_MIN + Math.random() * (Y_MAX - Y_MIN) }
+  }
+
   function newWanderState(startX?: number): WanderState {
-    const x = startX ?? (120 + Math.random() * 840)
-    return {
-      x, y: 420,
-      targetX: 120 + Math.random() * 840,
-      speed: 0.5 + Math.random() * 0.7,
-      idleUntil: 0,
-      facing: 1,
-      phase: Math.random() * Math.PI * 2,
-    }
+    const x = startX ?? (X_MIN + Math.random() * (X_MAX - X_MIN))
+    const y = Y_MIN + Math.random() * (Y_MAX - Y_MIN)
+    const { tx, ty } = randTarget()
+    return { x, y, targetX: tx, targetY: ty, speed: 0.5 + Math.random() * 0.7, idleUntil: 0, facing: 1, phase: Math.random() * Math.PI * 2 }
   }
 
   function stepWander(w: WanderState, now: number): number {
-    // 停止中はボブなし
     if (now < w.idleUntil) return 0
 
-    const diff = w.targetX - w.x
-    if (Math.abs(diff) < 2) {
-      // 目標到達 → 30%の確率で立ち止まる、それ以外は次の目標へ
+    const dx = w.targetX - w.x
+    const dy = w.targetY - w.y
+    const dist = Math.sqrt(dx * dx + dy * dy)
+
+    if (dist < 3) {
       if (Math.random() < 0.3) {
         w.idleUntil = now + 800 + Math.random() * 2500
         return 0
       }
-      w.targetX = 120 + Math.random() * 840
+      const t = randTarget()
+      w.targetX = t.tx; w.targetY = t.ty
       w.speed = 0.4 + Math.random() * 0.8
+    } else {
+      w.x += (dx / dist) * w.speed
+      w.y += (dy / dist) * w.speed * 0.5  // Y移動は半分の速度（奥行き感）
+      w.facing = dx > 0 ? 1 : -1
     }
-
-    const dir = diff > 0 ? 1 : -1
-    w.x += dir * w.speed
-    w.facing = dir
     return Math.abs(Math.sin((now + w.phase * 300) / 280)) * 5
   }
 
