@@ -1,8 +1,10 @@
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
+import type { DroppedItem } from '../types'
 
 export interface GameState {
   coin: number
+  get droppedItems(): DroppedItem[]
   pet: {
     species: string
     stage: number
@@ -15,16 +17,22 @@ export interface GameState {
   time: 'day' | 'dusk' | 'night'
   toast(msg: string): void
   setCoin(n: number): void
+  collectItem(id: string): void
+  sellAll(): void
+  feedPet(): void
+  petPet(): void
+  inventoryTotal(): number
+  subscribe(cb: () => void): () => void
 }
 
 export function buildGameState(toastEl: HTMLElement | null): GameState {
   const pet = usePetStore.getState().pet
   const player = usePlayerStore.getState()
-
   const stage = pet.level >= 50 ? 3 : pet.level >= 20 ? 2 : 1
 
   return {
     coin: player.money,
+    get droppedItems() { return usePlayerStore.getState().droppedItems },
     pet: {
       species: pet.species,
       stage,
@@ -40,7 +48,7 @@ export function buildGameState(toastEl: HTMLElement | null): GameState {
       const t = document.createElement('div')
       t.className = 'mg-toast'
       t.textContent = msg
-      t.style.cssText = 'position:absolute; right:16px; top:16px; z-index:50; animation: toastIn 0.3s ease-out;'
+      t.style.cssText = 'position:absolute; right:16px; top:16px; z-index:50;'
       toastEl.appendChild(t)
       setTimeout(() => t.remove(), 2600)
     },
@@ -48,6 +56,28 @@ export function buildGameState(toastEl: HTMLElement | null): GameState {
       const next = Math.max(0, n)
       this.coin = next
       usePlayerStore.setState({ money: next })
+    },
+    collectItem(id: string) {
+      usePlayerStore.getState().collectItem(id)
+      this.coin = usePlayerStore.getState().money
+    },
+    sellAll() {
+      usePlayerStore.getState().sellAll()
+      this.coin = usePlayerStore.getState().money
+    },
+    feedPet() {
+      usePetStore.getState().updateStats(10, 20)
+    },
+    petPet() {
+      usePetStore.getState().updateStats(10, 0)
+    },
+    inventoryTotal() {
+      return usePlayerStore.getState().inventory.reduce((s, i) => s + i.sellPrice, 0)
+    },
+    subscribe(cb: () => void) {
+      const unsub1 = usePlayerStore.subscribe(cb)
+      const unsub2 = usePetStore.subscribe(cb)
+      return () => { unsub1(); unsub2() }
     },
   }
 }

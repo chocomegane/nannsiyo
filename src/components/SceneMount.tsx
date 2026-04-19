@@ -28,6 +28,7 @@ export default function SceneMount({ sceneKey }: { sceneKey: string }) {
     const builder = BUILDERS[sceneKey as keyof typeof BUILDERS]
     if (builder) builder(root, game, showScene)
     return () => {
+      ;(root as HTMLElement & { _cleanup?: () => void })._cleanup?.()
       root.querySelectorAll('canvas').forEach((c) => (c as HTMLCanvasElement & { destroy?: () => void }).destroy?.())
       root.innerHTML = ''
     }

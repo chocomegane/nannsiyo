@@ -110,45 +110,55 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     setTimeout(() => { if (currentBubble) { currentBubble.remove(); currentBubble = null } }, 5000)
   })
 
-  // Drops
-  const drops: { x: number; y: number; kind: string; value: number; emoji: string }[] = [
-    { x:40, y:60, kind:'coin', value:50, emoji:'🪙' },
-    { x:-80, y:90, kind:'rare', value:300, emoji:'💎' },
-    { x:60, y:-20, kind:'scale', value:100, emoji:'🔸' },
-  ]
+  // アイテムIDから絵文字へのマッピング
+  const ITEM_EMOJI: Record<string, string> = {
+    dragon_scale:'🔸', dragon_claw:'🐉',
+    unicorn_hair:'✨', unicorn_dust:'🌟',
+    slime_gel:'💚', slime_core:'💎',
+    phoenix_feather:'🪶', phoenix_tear:'💧',
+    golem_stone:'🪨', golem_core:'⚙️',
+  }
+
+  // 実際のドロップアイテムをストアから描画
+  let prevDropCount = game.droppedItems.length
+
   function renderDrops() {
     room.querySelectorAll('.drop-item').forEach(e => e.remove())
-    drops.forEach((d, i) => {
-      const dEl = el('button','drop-item')
-      dEl.style.cssText = `position:absolute; left:calc(50% + ${d.x}px); top:calc(58% + ${d.y}px); transform:translate(-50%,-50%); width:44px; height:44px; border-radius:50%; border:2px solid var(--ink); background:${d.kind==='rare'?'#f5e4b3':'#f0d290'}; box-shadow:3px 3px 0 var(--ink); cursor:pointer; font-size:20px; z-index:2;`
-      dEl.textContent = d.emoji
-      dEl.title = `+${d.value}G で売却`
-      dEl.addEventListener('click', (e) => {
-        e.stopPropagation()
-        game.setCoin(game.coin + d.value)
-        game.toast(`🪙 +${d.value}G を回収！`)
-        drops.splice(i, 1)
-        renderDrops()
+    game.droppedItems.forEach((d) => {
+      const emoji = ITEM_EMOJI[d.itemId] ?? '✨'
+      const dEl = el('button', 'drop-item')
+      dEl.style.cssText = `position:absolute; left:${d.x}%; top:${d.y}%; transform:translate(-50%,-50%); width:44px; height:44px; border-radius:50%; border:2px solid var(--ink); background:#f5e4b3; box-shadow:3px 3px 0 var(--ink); cursor:pointer; font-size:20px; z-index:2;`
+      dEl.textContent = emoji
+      dEl.title = `${d.name} (+${d.sellPrice}G)`
+      dEl.addEventListener('click', (ev) => {
+        ev.stopPropagation()
+        game.collectItem(d.id)
+        game.toast(`${emoji} ${d.name} を回収！`)
       })
       room.appendChild(dEl)
     })
   }
   renderDrops()
 
-  // Drop timer
-  let cd = 42
-  const cdEl = topbar.querySelector<HTMLElement>('#dropCd')
-  const timer = setInterval(() => {
-    cd -= 1
-    if (cd <= 0) {
-      const list = ['🔸','🪙','💎','✨','🟠']
-      drops.push({ x:(Math.random()*300-150)|0, y:(Math.random()*160-60)|0, kind:'coin', value:50+Math.floor(Math.random()*200), emoji:list[Math.floor(Math.random()*list.length)] })
-      renderDrops()
-      cd = 30 + Math.floor(Math.random()*30)
+  // ストア変更を購読して再描画
+  const unsub = game.subscribe(() => {
+    const curr = game.droppedItems.length
+    if (curr > prevDropCount) {
+      dropCdSec = 30 + Math.floor(Math.random() * 30)
       game.toast('✨ 新しいドロップ！')
     }
-    if (cdEl && cdEl.isConnected) cdEl.textContent = String(cd)
-    else clearInterval(timer)
+    prevDropCount = curr
+    renderDrops()
+  })
+  ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = unsub
+
+  // ドロップカウントダウン表示
+  let dropCdSec = 45
+  const cdEl = topbar.querySelector<HTMLElement>('#dropCd')
+  const cdTimer = setInterval(() => {
+    dropCdSec = Math.max(0, dropCdSec - 1)
+    if (cdEl && cdEl.isConnected) cdEl.textContent = String(dropCdSec)
+    else clearInterval(cdTimer)
   }, 1000)
 
   // Action dock
@@ -210,16 +220,24 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-action]')
     if (!b) return
     const a = b.dataset.action
-    if (a==='feed')  { game.pet.hun = Math.min(1, game.pet.hun+0.2); game.toast('🍎 おいしい！') }
-    if (a==='pet')   { game.pet.hap = Math.min(1, game.pet.hap+0.1); game.toast('💕 うれしい！'); playEmote('💕') }
-    if (a==='skill') { game.toast('🔥 火炎ブレス！'); playEmote('🔥') }
-    if (a==='collect') {
-      const total = drops.reduce((s,d)=>s+d.value, 0)
-      if (total>0) { game.setCoin(game.coin+total); game.toast(`🧹 +${total}G 全部回収！`); drops.length=0; renderDrops() }
-      else game.toast('回収できるものはありません')
+    if (a === 'feed')  { game.feedPet(); game.toast('🍎 おいしい！') }
+    if (a === 'pet')   { game.petPet(); game.toast('💕 うれしい！'); playEmote('💕') }
+    if (a === 'skill') { game.toast('🔥 スキル発動！'); playEmote('🔥') }
+    if (a === 'collect') {
+      const items = game.droppedItems
+      if (items.length > 0) {
+        items.forEach(d => game.collectItem(d.id))
+        game.toast(`🧹 ${items.length}個 全部回収！`)
+      } else {
+        game.toast('回収できるものはありません')
+      }
     }
-    if (a==='sell')   game.toast('💰 在庫を売却しました')
-    if (a==='detail') openPetDetail()
+    if (a === 'sell') {
+      const total = game.inventoryTotal()
+      if (total > 0) { game.sellAll(); game.toast(`💰 +${total.toLocaleString()}G まとめ売り！`) }
+      else game.toast('売れるものがありません')
+    }
+    if (a === 'detail') openPetDetail()
   })
 
   if (!document.getElementById('roomAnims')) {

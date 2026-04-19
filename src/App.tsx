@@ -11,6 +11,7 @@ import LoginScreen from './components/LoginScreen'
 import Sidebar from './components/Sidebar'
 import Hud from './components/Hud'
 import SceneMount from './components/SceneMount'
+import { startDropLoop } from './systems/dropSystem'
 import type { Species } from './types'
 import './index.css'
 
@@ -49,7 +50,11 @@ export default function App() {
     if (!loggedIn) return
     const unsubPet = usePetStore.subscribe(() => scheduleSave())
     const unsubPlayer = usePlayerStore.subscribe(() => scheduleSave())
-    return () => { unsubPet(); unsubPlayer() }
+    const stopDrop = startDropLoop(
+      () => usePetStore.getState().pet,
+      (item) => usePlayerStore.getState().addDroppedItem(item),
+    )
+    return () => { unsubPet(); unsubPlayer(); stopDrop() }
   }, [loggedIn])
 
   function scheduleSave() {
