@@ -4,12 +4,10 @@ import type { Easing } from 'framer-motion'
 import type { Pet as PetType } from '../types'
 import { expToNextLevel } from '../data/experience'
 import { getEvolutionStage, calcEatAppearance } from '../data/evolution'
+import PixelPetCanvas from './PixelPetCanvas'
+import type { Species } from '../lib/pixelpet'
 
 const E = (e: Easing) => e
-
-const SPECIES_EMOJI: Record<string, string> = {
-  dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
-}
 
 type Action = 'float' | 'jump' | 'wiggle' | 'spin' | 'look' | 'squish' | 'happy'
 const ACTIONS: Action[] = ['float', 'float', 'float', 'jump', 'wiggle', 'spin', 'look', 'squish', 'happy']
@@ -102,16 +100,20 @@ export default function Pet({ pet }: Props) {
 
   return (
     <div className="flex flex-col items-center select-none gap-2">
-      <div className="relative flex items-center justify-center" style={{ width: 120, height: 120 }}>
+      <div className="relative flex items-center justify-center" style={{ width: 128, height: 128 }}>
         {orbs.map((o, i) => <FloatingOrb key={i} {...o} />)}
         <AnimatePresence mode="wait">
           <motion.div
             key={action}
-            className="text-8xl"
             animate={getAnimation(action, dir)}
-            style={{ filter, transformOrigin: 'center bottom', display: 'inline-block', transform: `scale(${totalScale})`, transition: 'filter 1s, transform 0.5s' }}
+            style={{ transformOrigin: 'center bottom', display: 'inline-block', transform: `scale(${totalScale})`, transition: 'transform 0.5s' }}
           >
-            {SPECIES_EMOJI[pet.species] ?? '🐾'}
+            <PixelPetCanvas
+              species={pet.species as Species}
+              level={pet.level}
+              size={128}
+              cssFilter={filter !== 'none' ? filter : undefined}
+            />
           </motion.div>
         </AnimatePresence>
         <motion.div

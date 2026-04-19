@@ -5,12 +5,10 @@ import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
 import { useWorldStore } from '../store/worldStore'
 import BgmPlayer from './BgmPlayer'
+import PixelPetCanvas from './PixelPetCanvas'
+import type { Species } from '../lib/pixelpet'
 
-const SPECIES_EMOJI: Record<string, string> = {
-  dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
-}
-
-interface OnlinePlayer { id: string; name: string; petEmoji: string; x: number; y: number }
+interface OnlinePlayer { id: string; name: string; species: string; level: number; x: number; y: number }
 
 interface Props { visitScene?: string }
 
@@ -24,10 +22,8 @@ export default function PetOverlay({ visitScene }: Props) {
   const [chatBubbles, setChatBubbles] = useState<Map<string, string>>(new Map())
 
   useEffect(() => {
-    const petEmoji = SPECIES_EMOJI[pet.species] ?? '🐾'
-
     const onConnect = () => {
-      parkSocket.emit('join', { id: parkSocket.id, name: playerName, petEmoji, scene })
+      parkSocket.emit('join', { id: parkSocket.id, name: playerName, species: pet.species, level: pet.level, scene })
     }
 
     parkSocket.on('connect', onConnect)
@@ -65,7 +61,7 @@ export default function PetOverlay({ visitScene }: Props) {
       parkSocket.disconnect()
       setPlayers([])
     }
-  }, [pet.species, playerName, scene])
+  }, [pet.species, pet.level, playerName, scene])
 
   const sendChat = () => {
     if (!chatInput.trim()) return
@@ -91,11 +87,12 @@ export default function PetOverlay({ visitScene }: Props) {
                 <div className="absolute top-full left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b border-r border-gray-100 rotate-45 -mt-1.5" />
               </div>
             )}
-            <motion.span
-              className="text-3xl drop-shadow"
-              animate={{ y: [0, -5, 0] }}
+            <motion.div
+              animate={{ y: [0, -4, 0] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-            >{p.petEmoji}</motion.span>
+            >
+              <PixelPetCanvas species={p.species as Species} level={p.level} size={48} />
+            </motion.div>
             <span className="text-[10px] text-white bg-black/40 rounded-full px-2 py-0.5 mt-0.5 whitespace-nowrap">{p.name}</span>
           </motion.div>
         )

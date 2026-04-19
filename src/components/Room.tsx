@@ -22,13 +22,11 @@ import AccountMenu from './AccountMenu'
 import RoomDecorations from './RoomDecorations'
 import PetOverlay from './PetOverlay'
 import BgmPlayer from './BgmPlayer'
-
-const SPECIES_EMOJI: Record<string, string> = {
-  dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
-}
+import PixelPetCanvas from './PixelPetCanvas'
+import type { Species } from '../lib/pixelpet'
 
 interface VisitData {
-  petEmoji: string
+  species: string
   petName: string
   petLevel: number
   furniture: FurnitureItem[]
@@ -78,7 +76,7 @@ export default function Room() {
       if (!data) return
       const p = data.pet
       setVisitData({
-        petEmoji: p ? (SPECIES_EMOJI[p.species] ?? '🐾') : '🐾',
+        species: p ? p.species : 'dragon',
         petName: p ? p.name : '？',
         petLevel: p ? p.level : 1,
         furniture: (data.furniture ?? []).map((f: { id: string; furniture_id: string; name: string; placed: number }) => ({
@@ -113,11 +111,12 @@ export default function Room() {
         {/* フレンドのペット */}
         {visitData && (
           <div className="absolute left-1/2 top-[28%] -translate-x-1/2 -translate-y-1/2 flex flex-col items-center select-none">
-            <motion.span
-              className="text-8xl drop-shadow-lg"
+            <motion.div
               animate={{ y: [0, -10, 0] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-            >{visitData.petEmoji}</motion.span>
+            >
+              <PixelPetCanvas species={visitData.species as Species} level={visitData.petLevel} size={128} />
+            </motion.div>
             <span className="mt-2 text-white bg-black/40 rounded-full px-3 py-1 text-sm font-bold">
               {visitData.petName} Lv.{visitData.petLevel}
             </span>

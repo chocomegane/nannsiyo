@@ -4,7 +4,8 @@ import type { Scene } from '../types'
 interface OnlinePlayer {
   id: string
   name: string
-  petEmoji: string
+  species: string
+  level: number
   x: number
   y: number
 }

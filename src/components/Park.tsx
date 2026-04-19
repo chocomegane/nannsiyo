@@ -6,10 +6,8 @@ import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
 import Teleport from './Teleport'
 import BgmPlayer from './BgmPlayer'
-
-const SPECIES_EMOJI: Record<string, string> = {
-  dragon: '🐉', unicorn: '🦄', slime: '🟢', phoenix: '🦅', golem: '🪨',
-}
+import PixelPetCanvas from './PixelPetCanvas'
+import type { Species } from '../lib/pixelpet'
 
 const CLOUDS = [
   { x: 5,  y: 8,  size: 'text-5xl', delay: 0,   dur: 18 },
@@ -30,8 +28,8 @@ const OBJECTS = [
   { x: 55, emoji: '⛲', label: '噴水' },
 ]
 
-interface ChatMessage { id: string; name: string; petEmoji: string; message: string }
-interface SelectedPlayer { name: string; petEmoji: string }
+interface ChatMessage { id: string; name: string; species: string; message: string }
+interface SelectedPlayer { name: string; species: string; level: number }
 
 export default function Park() {
   const { onlinePlayers, setOnlinePlayers, updatePlayerPos, removePlayer, addPlayer } = useWorldStore()
@@ -42,13 +40,12 @@ export default function Park() {
   const [selected, setSelected] = useState<SelectedPlayer | null>(null)
 
   useEffect(() => {
-    const petEmoji = SPECIES_EMOJI[pet.species] ?? '🐾'
-
     const onConnect = () => {
       parkSocket.emit('join', {
         id: parkSocket.id,
         name: playerName,
-        petEmoji,
+        species: pet.species,
+        level: pet.level,
         scene: 'park',
       })
     }
@@ -87,7 +84,7 @@ export default function Park() {
       parkSocket.disconnect()
       setOnlinePlayers([])
     }
-  }, [addPlayer, pet.species, playerName, removePlayer, setOnlinePlayers, updatePlayerPos])
+  }, [addPlayer, pet.species, pet.level, playerName, removePlayer, setOnlinePlayers, updatePlayerPos])
 
   return (
     <div
@@ -161,7 +158,7 @@ export default function Park() {
           animate={{ left: `${p.x}%`, top: `${p.y}%` }}
           transition={{ type: 'spring', stiffness: 150 }}
           style={{ transform: 'translate(-50%, -50%)' }}
-          onClick={() => setSelected({ name: p.name, petEmoji: p.petEmoji })}
+          onClick={() => setSelected({ name: p.name, species: p.species, level: p.level })}
         >
           {chatBubbles.has(p.id) && (
             <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-white rounded-2xl px-3 py-1 shadow text-xs text-gray-700 whitespace-nowrap max-w-[140px] truncate border border-gray-100">
@@ -169,11 +166,12 @@ export default function Park() {
               <div className="absolute bottom-[-6px] left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-b border-r border-gray-100 rotate-45" />
             </div>
           )}
-          <motion.span
-            className="text-4xl"
+          <motion.div
             animate={{ y: [0, -6, 0] }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          >{p.petEmoji}</motion.span>
+          >
+            <PixelPetCanvas species={p.species as Species} level={p.level} size={64} />
+          </motion.div>
           <span className="text-xs text-white bg-black/40 rounded-full px-2 py-0.5">{p.name}</span>
         </motion.div>
       ))}
@@ -200,8 +198,11 @@ export default function Park() {
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setSelected(null)}>
           <div className="bg-white rounded-3xl shadow-2xl p-6 w-56 text-center" onClick={(e) => e.stopPropagation()}>
-            <div className="text-6xl mb-2">{selected.petEmoji}</div>
-            <p className="font-bold text-gray-700 text-lg mb-3">{selected.name}</p>
+            <div className="flex justify-center mb-2">
+              <PixelPetCanvas species={selected.species as Species} level={selected.level} size={96} />
+            </div>
+            <p className="font-bold text-gray-700 text-lg mb-1">{selected.name}</p>
+            <p className="text-gray-400 text-xs mb-3">Lv.{selected.level}</p>
             <p className="text-gray-400 text-sm">公園で遊んでいます</p>
             <button onClick={() => setSelected(null)} className="mt-4 w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-medium transition-colors">閉じる</button>
           </div>
