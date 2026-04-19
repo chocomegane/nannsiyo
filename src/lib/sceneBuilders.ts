@@ -661,249 +661,287 @@ const ENEMIES = [
 export function buildDungeon(root: Root, game: GameState, showScene: (k: string) => void) {
   root.style.background = 'radial-gradient(circle at center, #3a3248 0%, #1d2026 100%)'
 
-  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg')
-  svg.setAttribute('viewBox','0 0 1080 600')
-  svg.setAttribute('preserveAspectRatio','xMidYMid slice')
-  svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%;'
-  svg.innerHTML = `
-    <rect x="0" y="0" width="1080" height="340" fill="#2a2e36"/>
-    <g stroke="#1d2026" stroke-width="2" fill="none">
-      ${(()=>{let s='';for(let y=40;y<340;y+=50)for(let x=(y/50%2?0:25);x<1080;x+=50)s+=`<rect x="${x}" y="${y}" width="50" height="50"/>`;return s;})()}
-    </g>
-    <g transform="translate(140, 60)"><rect x="-4" y="0" width="8" height="40" fill="#8a5a3a"/><circle cx="0" cy="-4" r="12" fill="#d4a24c"/><circle cx="0" cy="-4" r="8" fill="#ffeb9a"/></g>
-    <g transform="translate(940, 60)"><rect x="-4" y="0" width="8" height="40" fill="#8a5a3a"/><circle cx="0" cy="-4" r="12" fill="#d4a24c"/><circle cx="0" cy="-4" r="8" fill="#ffeb9a"/></g>
-    <polygon points="0,340 1080,340 1080,600 0,600" fill="#1d2026"/>
-    <g stroke="#353a44" stroke-width="1.5">
-      <line x1="540" y1="340" x2="0" y2="600"/><line x1="540" y1="340" x2="1080" y2="600"/>
-      <line x1="0" y1="400" x2="1080" y2="400"/><line x1="0" y1="470" x2="1080" y2="470"/><line x1="0" y1="540" x2="1080" y2="540"/>
-    </g>
-  `
-  root.appendChild(svg)
-
   // アニメーション定義
   if (!document.getElementById('dungAnim')) {
-    const st = document.createElement('style'); st.id='dungAnim'
+    const st = document.createElement('style'); st.id = 'dungAnim'
     st.textContent = `@keyframes dmg{from{transform:translateY(0);opacity:0}20%{opacity:1}to{transform:translateY(-40px);opacity:0}} @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}`
     document.head.appendChild(st)
   }
 
-  // ── 状態 ──
-  let floor = game.getDungeonFloor()
-  let totalWins = game.getDungeonWins()
-  const enemyIdx = Math.min(Math.floor((floor - 1) / 3), ENEMIES.length - 1)
-  const baseEnemy = ENEMIES[enemyIdx]
-  const scaleF = 1 + (floor - 1) * 0.08
-  const enemyHp = { cur: Math.round(baseEnemy.hp * scaleF), max: Math.round(baseEnemy.hp * scaleF) }
-  const php = { cur: 100, max: 100 }
-  let defending = false
-  let battleOver = false
+  // ── 背景SVG ──
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg')
+  svg.setAttribute('viewBox','0 0 1080 600')
+  svg.setAttribute('preserveAspectRatio','xMidYMid slice')
+  svg.style.cssText = 'position:absolute; inset:0; width:100%; height:100%; pointer-events:none;'
+  svg.innerHTML = `
+    <rect x="0" y="0" width="1080" height="600" fill="#1d2026"/>
+    <g stroke="#2a2e36" stroke-width="2" fill="none">
+      ${(()=>{let s='';for(let y=0;y<600;y+=50)for(let x=(y/50%2?0:25);x<1080;x+=50)s+=`<rect x="${x}" y="${y}" width="50" height="50"/>`;return s;})()}
+    </g>
+    <g transform="translate(140,40)"><rect x="-4" y="0" width="8" height="40" fill="#8a5a3a"/><circle cx="0" cy="-4" r="12" fill="#d4a24c"/><circle cx="0" cy="-4" r="8" fill="#ffeb9a"/></g>
+    <g transform="translate(940,40)"><rect x="-4" y="0" width="8" height="40" fill="#8a5a3a"/><circle cx="0" cy="-4" r="12" fill="#d4a24c"/><circle cx="0" cy="-4" r="8" fill="#ffeb9a"/></g>
+  `
+  root.appendChild(svg)
 
-  // ── UI ──
+  // ── レイアウト ──
+  // 上: フロア情報バー
   const topbar = el('div')
-  topbar.style.cssText = `position:absolute; top:16px; left:16px; right:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; z-index:5;`
+  topbar.style.cssText = 'position:absolute; top:0; left:0; right:0; height:48px; background:#1a1d24; border-bottom:2px solid #353a44; display:flex; align-items:center; padding:0 16px; gap:12px; z-index:10;'
   root.appendChild(topbar)
 
-  function refreshTopbar() {
-    topbar.innerHTML = `
-      <div class="panel" style="padding:8px 14px; background:var(--paper); font-weight:700;">🗺️ フロア <span style="color:var(--accent)">F${floor}</span></div>
-      <div class="panel" style="padding:8px 14px; background:var(--paper); font-size:12px;">累計勝利 <b>${totalWins}</b></div>
-      <button class="btn" data-act="retreat">🏃 撤退</button>
-    `
-    topbar.querySelector<HTMLElement>('[data-act="retreat"]')!.addEventListener('click', () => {
-      game.toast('🏃 自室に戻ります')
-      setTimeout(() => showScene('room'), 600)
-    })
+  // 中央エリア: 左=パーティ 右=敵
+  const battleArea = el('div')
+  battleArea.style.cssText = 'position:absolute; top:48px; left:0; right:320px; bottom:160px; display:flex; align-items:center; justify-content:space-around; padding:16px;'
+  root.appendChild(battleArea)
+
+  // 右サイドバー: 戦闘ログ
+  const logPanel = el('div')
+  logPanel.style.cssText = 'position:absolute; top:48px; right:0; width:316px; bottom:160px; background:#1a1d24; border-left:2px solid #353a44; display:flex; flex-direction:column; padding:10px; gap:6px; overflow:hidden;'
+  logPanel.innerHTML = `<div style="color:#f5e4b3; font-size:12px; font-weight:700; margin-bottom:4px;">📜 バトルログ</div><div id="logList" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:4px;"></div>`
+  root.appendChild(logPanel)
+
+  // 下: コマンドパネル
+  const cmdArea = el('div')
+  cmdArea.style.cssText = 'position:absolute; left:0; right:0; bottom:0; height:156px; background:#1a1d24; border-top:2px solid #353a44; padding:12px 16px; display:flex; gap:12px; align-items:center; z-index:10;'
+  root.appendChild(cmdArea)
+
+  // ── Socket.io ──
+  const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
+  const socket = io(BASE_URL + '/dungeon', { transports: ['websocket','polling'] })
+
+  type PlayerState = { playerId: string; name: string; species: string; level: number; hp: number; maxHp: number; alive: boolean; defending: boolean }
+  type EnemyState  = { name: string; emoji: string; lv: number; hp: number; maxHp: number; atk: number; reward: number }
+  type DungeonState = { partyId: string; floor: number; enemy: EnemyState; players: PlayerState[]; currentTurnPlayerId: string | null; phase: string }
+
+  let state: DungeonState | null = null
+  let myTurn = false
+
+  function addLog(msg: string, type = 'info') {
+    const logList = root.querySelector<HTMLElement>('#logList')
+    if (!logList) return
+    const c = { victory:'#d4a24c', defeat:'#c8553d', join:'#6b8e7f', floor:'#7fb3c8', info:'#f5e4b3' }[type] ?? '#f5e4b3'
+    const entry = el('div')
+    entry.style.cssText = `font-size:11px; color:${c}; padding:3px 0; border-bottom:1px solid #2a2e36;`
+    entry.textContent = msg
+    logList.appendChild(entry)
+    logList.scrollTop = logList.scrollHeight
+    // 最大50件
+    while (logList.children.length > 50) logList.firstElementChild?.remove()
   }
-  refreshTopbar()
 
-  // 敵ボックス
-  const enemyBox = el('div')
-  enemyBox.style.cssText = `position:absolute; right:180px; top:140px; z-index:3; text-align:center; width:240px;`
-  root.appendChild(enemyBox)
-
-  function refreshEnemy() {
-    enemyBox.innerHTML = `
-      <div style="font-size:90px; margin-bottom:4px;">${baseEnemy.emoji}</div>
-      <div style="color:#f5e4b3; font-weight:700; font-size:15px;">${baseEnemy.name} Lv.${baseEnemy.lv + floor - 1}</div>
-      <div style="background:rgba(0,0,0,0.4); border:2px solid #f5e4b3; border-radius:8px; padding:4px; margin-top:6px; width:200px; margin-left:auto; margin-right:auto;">
-        <div style="height:10px; background:#2a2420; border-radius:4px; overflow:hidden;">
-          <div id="ehp" style="height:100%; background:#c8553d; width:${enemyHp.cur/enemyHp.max*100}%; transition:width 0.2s;"></div>
-        </div>
-        <div style="color:#fff; font-size:10px; font-family:'Press Start 2P';" id="ehpTxt">${enemyHp.cur}/${enemyHp.max}</div>
-      </div>
-    `
-  }
-  refreshEnemy()
-
-  // 自分のペット
-  const petBox = el('div')
-  petBox.style.cssText = `position:absolute; left:180px; top:260px; z-index:3; text-align:center;`
-  petBox.appendChild(createPetCanvas(game.pet.species as Species, game.pet.stage, 160))
-  petBox.appendChild(el('div','',`<div style="color:#f5e4b3; font-weight:700; font-size:15px;">${game.pet.name}</div>`))
-  root.appendChild(petBox)
-
-  // HP パネル
-  const hpSide = el('div','panel')
-  hpSide.style.cssText = `position:absolute; right:16px; bottom:140px; padding:12px; background:var(--paper); width:220px; z-index:4; font-size:13px;`
-  hpSide.innerHTML = `
-    <div style="font-weight:700; margin-bottom:6px;">あなたのペット</div>
-    <div>HP <b id="phpTxt">${php.cur}/${php.max}</b></div>
-    <div class="bar" style="height:10px;"><span id="phpBar" style="background:#6b8e7f; width:100%; transition:width 0.2s;"></span></div>
-    <div style="margin-top:10px; color:var(--ink-2); font-size:11px;">次の敵攻撃まで</div>
-    <div class="bar" style="height:6px;"><span id="atkBar" style="background:var(--accent-3); width:0%"></span></div>
-  `
-  root.appendChild(hpSide)
-
-  // コマンドパネル
-  const cmd = el('div','panel')
-  cmd.style.cssText = `position:absolute; left:16px; right:250px; bottom:16px; padding:14px; background:var(--paper); display:grid; grid-template-columns:repeat(4,1fr); gap:10px; z-index:4;`
-  cmd.innerHTML = `
-    <button class="btn primary" style="padding:16px; font-size:14px;" data-cmd="attack"><span style="font-size:22px">⚔️</span> 攻撃</button>
-    <button class="btn" style="padding:16px; font-size:14px;" data-cmd="skill"><span style="font-size:22px">✨</span> スキル</button>
-    <button class="btn" style="padding:16px; font-size:14px;" data-cmd="item"><span style="font-size:22px">🍎</span> 回復</button>
-    <button class="btn" style="padding:16px; font-size:14px;" data-cmd="defend"><span style="font-size:22px">🛡️</span> 防御</button>
-  `
-  root.appendChild(cmd)
-
-  function showDmg(x: number, y: number, val: number, color='#c8553d', prefix='-') {
+  function showDmgFloat(x: number, y: number, val: number, color = '#c8553d', prefix = '-') {
     const d = el('div')
     d.textContent = `${prefix}${val}`
-    d.style.cssText = `position:absolute; left:${x}px; top:${y}px; color:${color}; font-family:'Press Start 2P'; font-size:26px; text-shadow:2px 2px 0 #000; z-index:20; animation:dmg 1s forwards; pointer-events:none;`
+    d.style.cssText = `position:absolute; left:${x}px; top:${y}px; color:${color}; font-family:'Press Start 2P'; font-size:22px; text-shadow:2px 2px 0 #000; z-index:30; animation:dmg 1s forwards; pointer-events:none;`
     root.appendChild(d)
     setTimeout(() => d.remove(), 1000)
   }
 
-  function updateHpUI() {
-    const bar = root.querySelector<HTMLElement>('#phpBar')
-    const txt = root.querySelector<HTMLElement>('#phpTxt')
-    if (bar) bar.style.width = (php.cur / php.max * 100) + '%'
-    if (txt) txt.textContent = `${php.cur}/${php.max}`
-  }
+  function renderState(s: DungeonState) {
+    state = s
+    myTurn = s.currentTurnPlayerId === game.playerId && s.phase === 'battle'
 
-  function updateEnemyHpUI() {
-    const bar = root.querySelector<HTMLElement>('#ehp')
-    const txt = root.querySelector<HTMLElement>('#ehpTxt')
-    if (bar) bar.style.width = (enemyHp.cur / enemyHp.max * 100) + '%'
-    if (txt) txt.textContent = `${enemyHp.cur}/${enemyHp.max}`
-  }
-
-  // ── 勝利処理 ──
-  function onVictory() {
-    battleOver = true
-    clearInterval(atkTimer)
-    floor++
-    totalWins++
-    const reward = Math.round(baseEnemy.reward * scaleF)
-    game.setCoin(game.coin + reward)
-    game.setDungeonFloor(floor)
-    game.setDungeonWins(totalWins)
-
-    const overlay = el('div')
-    overlay.style.cssText = `position:absolute; inset:0; background:rgba(0,0,0,0.6); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; gap:16px;`
-    overlay.innerHTML = `
-      <div style="font-size:48px;">🏆</div>
-      <div style="color:#f5e4b3; font-family:'Press Start 2P'; font-size:18px;">勝利！</div>
-      <div style="color:#d4a24c; font-size:14px;">+${reward}G 獲得 · F${floor}へ進む</div>
-      <button class="btn primary" id="nextFloor" style="font-size:15px; padding:12px 28px;">次のフロアへ ▶</button>
+    // ── トップバー ──
+    topbar.innerHTML = `
+      <div style="color:#f5e4b3; font-family:'Press Start 2P'; font-size:12px;">F${s.floor}</div>
+      <div style="color:#aaa; font-size:12px; margin-left:8px;">${s.players.filter(p=>p.alive).length}人パーティ</div>
+      <div style="flex:1"></div>
+      ${myTurn ? `<div style="color:#d4a24c; font-weight:700; font-size:13px; animation:shake 0.6s infinite;">⚡ あなたのターン！</div>` : `<div style="color:#aaa; font-size:12px;">⏳ ${s.players.find(p=>p.playerId===s.currentTurnPlayerId)?.name ?? '??'} のターン...</div>`}
+      <div style="flex:1"></div>
+      <button id="retreatBtn" class="btn" style="font-size:12px;">🏃 撤退</button>
     `
-    root.appendChild(overlay)
-    overlay.querySelector('#nextFloor')!.addEventListener('click', () => {
-      overlay.remove()
-      // 敵とフロアをリフレッシュ
-      const newIdx = Math.min(Math.floor((floor - 1) / 3), ENEMIES.length - 1)
-      const newEnemy = ENEMIES[newIdx]
-      const newScale = 1 + (floor - 1) * 0.08
-      enemyHp.cur = Math.round(newEnemy.hp * newScale)
-      enemyHp.max = enemyHp.cur
-      // 敵UIを更新
-      Object.assign(baseEnemy, newEnemy)
-      refreshEnemy()
-      refreshTopbar()
-      battleOver = false
-      defending = false
-      // インターバル再開
-      atkCd = 0
-      atkTimer = setInterval(enemyAttackTick, 100)
+    topbar.querySelector('#retreatBtn')!.addEventListener('click', () => {
+      socket.emit('dungeon:retreat')
+      showScene('room')
+    })
+
+    // ── バトルエリア ──
+    battleArea.innerHTML = ''
+
+    // 左: パーティ
+    const partyCol = el('div')
+    partyCol.style.cssText = 'display:flex; flex-direction:column; gap:12px; align-items:center;'
+    s.players.forEach(p => {
+      const isMe = p.playerId === game.playerId
+      const isTurn = p.playerId === s.currentTurnPlayerId
+      const card = el('div')
+      card.style.cssText = `display:flex; align-items:center; gap:10px; background:${isTurn?'#2a3040':'#1e2230'}; border:2px solid ${isTurn?'#d4a24c':'#353a44'}; border-radius:12px; padding:8px 12px; opacity:${p.alive?1:0.4}; transition:all 0.2s; min-width:200px;`
+      const stg = p.level >= 50 ? 3 : p.level >= 20 ? 2 : 1
+      const canvas = createPetCanvas(p.species as Species, stg, 48)
+      if (!p.alive) canvas.style.filter = 'grayscale(1)'
+      card.appendChild(canvas)
+      const info = el('div')
+      info.style.cssText = 'flex:1;'
+      info.innerHTML = `
+        <div style="color:#f5e4b3; font-size:12px; font-weight:700;">${p.name}${isMe?' (you)':''}${!p.alive?' 💀':''}</div>
+        <div style="font-size:10px; color:#aaa;">Lv.${p.level}</div>
+        <div style="display:flex; align-items:center; gap:4px; margin-top:3px;">
+          <span style="font-size:10px; color:#6b8e7f;">HP</span>
+          <div style="flex:1; height:6px; background:#2a2420; border-radius:3px; overflow:hidden;">
+            <div style="height:100%; background:${p.hp/p.maxHp>0.5?'#6b8e7f':'#c8553d'}; width:${p.hp/p.maxHp*100}%; transition:width 0.3s;"></div>
+          </div>
+          <span style="font-size:9px; color:#aaa;">${p.hp}/${p.maxHp}</span>
+        </div>
+        ${p.defending?`<div style="font-size:10px; color:#7fb3c8;">🛡️ 防御中</div>`:''}
+      `
+      card.appendChild(info)
+      partyCol.appendChild(card)
+    })
+    battleArea.appendChild(partyCol)
+
+    // VS
+    const vs = el('div')
+    vs.style.cssText = 'color:#c8553d; font-family:"Press Start 2P"; font-size:20px; text-shadow:2px 2px 0 #000;'
+    vs.textContent = 'VS'
+    battleArea.appendChild(vs)
+
+    // 右: 敵
+    const enemyCol = el('div')
+    enemyCol.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:8px;'
+    enemyCol.id = 'enemyBox'
+    const hpPct = s.enemy.hp / s.enemy.maxHp * 100
+    enemyCol.innerHTML = `
+      <div style="font-size:80px;">${s.enemy.emoji}</div>
+      <div style="color:#f5e4b3; font-weight:700; font-size:14px;">${s.enemy.name}</div>
+      <div style="color:#aaa; font-size:11px;">Lv.${s.enemy.lv}</div>
+      <div style="background:rgba(0,0,0,0.4); border:2px solid #f5e4b3; border-radius:8px; padding:6px; width:180px;">
+        <div style="height:10px; background:#2a2420; border-radius:4px; overflow:hidden;">
+          <div id="ehpBar" style="height:100%; background:${hpPct>50?'#c8553d':'#8a1a1a'}; width:${hpPct}%; transition:width 0.3s;"></div>
+        </div>
+        <div style="color:#fff; font-size:10px; text-align:center; margin-top:2px;">${s.enemy.hp} / ${s.enemy.maxHp}</div>
+      </div>
+    `
+    battleArea.appendChild(enemyCol)
+
+    // ── コマンドパネル ──
+    renderCommands(myTurn)
+  }
+
+  function renderCommands(active: boolean) {
+    cmdArea.innerHTML = ''
+    if (!active) {
+      const wait = el('div')
+      wait.style.cssText = 'flex:1; text-align:center; color:#aaa; font-size:14px;'
+      wait.textContent = state ? `⏳ ${state.players.find(p=>p.playerId===state!.currentTurnPlayerId)?.name ?? '??'} のターンを待っています...` : '接続中...'
+      cmdArea.appendChild(wait)
+      return
+    }
+    const cmds = [
+      { cmd:'attack', icon:'⚔️', label:'攻撃', cls:'primary' },
+      { cmd:'skill',  icon:'✨', label:'スキル', cls:'' },
+      { cmd:'item',   icon:'🍎', label:'回復',  cls:'sage' },
+      { cmd:'defend', icon:'🛡️', label:'防御',  cls:'' },
+    ]
+    cmds.forEach(c => {
+      const btn = el('button', `btn ${c.cls}`)
+      btn.style.cssText = 'flex:1; padding:20px 8px; font-size:14px; display:flex; flex-direction:column; align-items:center; gap:6px;'
+      btn.innerHTML = `<span style="font-size:28px;">${c.icon}</span>${c.label}`
+      btn.addEventListener('click', () => {
+        if (!myTurn) return
+        myTurn = false
+        renderCommands(false)
+        socket.emit('dungeon:action', { type: c.cmd })
+      })
+      cmdArea.appendChild(btn)
     })
   }
 
-  // ── 敗北処理（ペット死亡） ──
-  function onDefeat() {
-    battleOver = true
-    clearInterval(atkTimer)
-    game.setDungeonFloor(1)
-    game.setDungeonWins(0)
-    floor = 1
-    totalWins = 0
+  // ── Socket イベント ──
+  socket.on('connect', () => {
+    socket.emit('dungeon:join', {
+      playerId: game.playerId,
+      name: game.pet.name,
+      species: game.pet.species,
+      level: game.pet.lv,
+    })
+    addLog('🔌 ダンジョンに接続しました', 'join')
+  })
 
-    const overlay = el('div')
-    overlay.style.cssText = `position:absolute; inset:0; background:rgba(0,0,0,0.7); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; gap:16px;`
-    overlay.innerHTML = `
-      <div style="font-size:48px;">💀</div>
-      <div style="color:#c8553d; font-family:'Press Start 2P'; font-size:18px;">倒れた…</div>
-      <div style="color:#f5e4b3; font-size:13px;">ダンジョン進行度がリセットされました</div>
-      <button class="btn" id="goRoom" style="font-size:14px; padding:10px 24px;">自室に戻る</button>
-    `
-    root.appendChild(overlay)
-    overlay.querySelector('#goRoom')!.addEventListener('click', () => showScene('room'))
-  }
+  socket.on('dungeon:state', (s: DungeonState) => {
+    renderState(s)
+  })
 
-  // ── 敵の攻撃タイマー ──
-  let atkCd = 0
-  function enemyAttackTick() {
-    if (battleOver) return
-    atkCd += 2
-    const bar = root.querySelector<HTMLElement>('#atkBar')
-    if (bar) bar.style.width = atkCd + '%'
-    if (atkCd >= 100) {
-      atkCd = 0
-      const rawDmg = Math.round(baseEnemy.atk * scaleF)
-      const dmg = defending ? Math.max(1, Math.round(rawDmg * 0.4)) : rawDmg
-      defending = false
-      php.cur = Math.max(0, php.cur - dmg)
-      updateHpUI()
-      showDmg(280, 300, dmg, '#fff')
-      petBox.style.animation = 'shake 0.3s'; setTimeout(() => petBox.style.animation = '', 300)
-      if (php.cur <= 0) onDefeat()
+  socket.on('dungeon:log', ({ message, type }: { message: string; type: string }) => {
+    addLog(message, type)
+  })
+
+  socket.on('dungeon:action_result', (data: {
+    actorId: string; type: string; playerDmg: number;
+    enemyHp: number; actorHp: number; log: string;
+  }) => {
+    addLog(data.log)
+    // ダメージエフェクト
+    const enemyBox = root.querySelector<HTMLElement>('#enemyBox')
+    if (data.playerDmg > 0 && enemyBox) {
+      const rect = enemyBox.getBoundingClientRect()
+      const rootRect = root.getBoundingClientRect()
+      showDmgFloat(rect.left - rootRect.left + 60, rect.top - rootRect.top + 40, data.playerDmg)
+      enemyBox.style.animation = 'shake 0.3s'
+      setTimeout(() => { if (enemyBox) enemyBox.style.animation = '' }, 300)
     }
-    if (!root.isConnected) clearInterval(atkTimer)
-  }
-  let atkTimer = setInterval(enemyAttackTick, 100)
-
-  // ── プレイヤーコマンド ──
-  cmd.addEventListener('click', (e) => {
-    if (battleOver) return
-    const b = (e.target as HTMLElement).closest<HTMLElement>('[data-cmd]')
-    if (!b) return
-    const act = b.dataset.cmd
-    if (act === 'attack') {
-      const petAtk = 8 + game.pet.lv * 2
-      const dmg = petAtk + Math.floor(Math.random() * petAtk * 0.5)
-      enemyHp.cur = Math.max(0, enemyHp.cur - dmg)
-      updateEnemyHpUI()
-      showDmg(750, 200, dmg)
-      enemyBox.style.animation = 'shake 0.3s'; setTimeout(() => enemyBox.style.animation = '', 300)
-      if (enemyHp.cur <= 0) onVictory()
-    } else if (act === 'skill') {
-      const dmg = 20 + game.pet.lv * 4
-      enemyHp.cur = Math.max(0, enemyHp.cur - dmg)
-      updateEnemyHpUI()
-      showDmg(750, 180, dmg, '#d4a24c')
-      game.toast('✨ スキル発動！')
-      if (enemyHp.cur <= 0) onVictory()
-    } else if (act === 'item') {
-      const heal = 30
-      php.cur = Math.min(php.max, php.cur + heal)
-      updateHpUI()
-      showDmg(300, 280, heal, '#6b8e7f', '+')
-      game.toast('🍎 回復！ +30HP')
-    } else if (act === 'defend') {
-      defending = true
-      game.toast('🛡️ 防御の構え（次の攻撃を60%軽減）')
+    // HP更新（stateが来るまでの即時反映）
+    const ehpBar = root.querySelector<HTMLElement>('#ehpBar')
+    if (ehpBar && state) {
+      const pct = data.enemyHp / state.enemy.maxHp * 100
+      ehpBar.style.width = pct + '%'
     }
   })
 
+  socket.on('dungeon:enemy_attack', (data: {
+    targetId: string; dmg: number; actorHp: number; alive: boolean; log: string;
+  }) => {
+    addLog(data.log, data.alive ? 'info' : 'defeat')
+    if (data.targetId === game.playerId) {
+      showDmgFloat(200, 300, data.dmg, '#fff')
+    }
+  })
+
+  socket.on('dungeon:victory', ({ floor, reward }: { floor: number; reward: number }) => {
+    game.setCoin(game.coin + reward)
+    game.setDungeonFloor(floor + 1)
+    game.setDungeonWins(game.getDungeonWins() + 1)
+
+    const overlay = el('div')
+    overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.65); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; gap:14px;'
+    overlay.innerHTML = `
+      <div style="font-size:52px;">🏆</div>
+      <div style="color:#f5e4b3; font-family:'Press Start 2P'; font-size:18px;">勝利！</div>
+      <div style="color:#d4a24c; font-size:14px;">パーティ全員に +${reward}G</div>
+      <button class="btn primary" id="nextFloorBtn" style="font-size:15px; padding:12px 28px;">次のフロアへ ▶</button>
+      <button class="btn" id="retreatAfterBtn" style="font-size:13px;">🏠 自室に戻る</button>
+    `
+    root.appendChild(overlay)
+    overlay.querySelector('#nextFloorBtn')!.addEventListener('click', () => {
+      overlay.remove()
+      socket.emit('dungeon:next_floor')
+    })
+    overlay.querySelector('#retreatAfterBtn')!.addEventListener('click', () => {
+      socket.emit('dungeon:retreat')
+      showScene('room')
+    })
+  })
+
+  socket.on('dungeon:defeat', () => {
+    game.setDungeonFloor(1)
+    game.setDungeonWins(0)
+
+    const overlay = el('div')
+    overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.75); display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; gap:14px;'
+    overlay.innerHTML = `
+      <div style="font-size:52px;">💀</div>
+      <div style="color:#c8553d; font-family:'Press Start 2P'; font-size:18px;">全滅…</div>
+      <div style="color:#f5e4b3; font-size:13px;">ダンジョン進行度がリセットされました</div>
+      <button class="btn" id="goRoomBtn" style="font-size:14px; padding:10px 24px;">🏠 自室に戻る</button>
+    `
+    root.appendChild(overlay)
+    overlay.querySelector('#goRoomBtn')!.addEventListener('click', () => showScene('room'))
+  })
+
   addBoardButton(root, 'dungeon', game)
+
+  ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
+    socket.disconnect()
+  }
 }
 
 // ── LOTTERY ────────────────────────────────────────────────────────────────
