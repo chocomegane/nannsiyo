@@ -297,7 +297,51 @@ export function buildPark(root: Root, game: GameState) {
   // ── ペット描画ヘルパー ──
   const PET_SIZE = 80
   type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
-  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; chatTimer?: ReturnType<typeof setTimeout>; phase: number }>()
+
+  // 目標地点ベースの自然な歩行状態
+  type WanderState = {
+    x: number; y: number
+    targetX: number
+    speed: number      // px/frame
+    idleUntil: number  // ms: この時刻まで停止
+    facing: number     // 1=右 -1=左
+    phase: number      // ボブ位相オフセット（rad）
+  }
+
+  function newWanderState(startX?: number): WanderState {
+    const x = startX ?? (120 + Math.random() * 840)
+    return {
+      x, y: 420,
+      targetX: 120 + Math.random() * 840,
+      speed: 0.5 + Math.random() * 0.7,
+      idleUntil: 0,
+      facing: 1,
+      phase: Math.random() * Math.PI * 2,
+    }
+  }
+
+  function stepWander(w: WanderState, now: number): number {
+    // 停止中はボブなし
+    if (now < w.idleUntil) return 0
+
+    const diff = w.targetX - w.x
+    if (Math.abs(diff) < 2) {
+      // 目標到達 → 30%の確率で立ち止まる、それ以外は次の目標へ
+      if (Math.random() < 0.3) {
+        w.idleUntil = now + 800 + Math.random() * 2500
+        return 0
+      }
+      w.targetX = 120 + Math.random() * 840
+      w.speed = 0.4 + Math.random() * 0.8
+    }
+
+    const dir = diff > 0 ? 1 : -1
+    w.x += dir * w.speed
+    w.facing = dir
+    return Math.abs(Math.sin((now + w.phase * 300) / 280)) * 5
+  }
+
+  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; chatTimer?: ReturnType<typeof setTimeout>; wander: WanderState }>()
 
   function stageFromLevel(lv: number) { return lv >= 50 ? 3 : lv >= 20 ? 2 : 1 }
 
@@ -343,18 +387,12 @@ export function buildPark(root: Root, game: GameState) {
     wrapper.style.top  = (y - PET_SIZE - bobOffset) + 'px'
   }
 
-  // ── 自分のペット（game.petはgetterなので毎回最新値を取得）──
+  // ── 自分のペット ──
   const currentPet = game.pet
-  // 速度・位相をランダムにしてほかのプレイヤーと動きが被らないようにする
-  const youPhase = Math.random() * Math.PI * 2
-  const youSpeed = 0.5 + Math.random() * 0.8  // 0.5〜1.3 px/frame
-  const youStartX = 200 + Math.random() * 680  // 初期位置もランダム
-  const youData: PeerData & { dx: number; facing: number; phase: number } = {
+  const youWander = newWanderState()
+  const youData: PeerData = {
     id: game.playerId, name: currentPet.name, species: currentPet.species, level: currentPet.lv,
-    x: youStartX, y: 420,
-    dx: youSpeed,
-    facing: 1,
-    phase: youPhase,
+    x: youWander.x, y: 420,
   }
   const youWrapper = makePetWrapper(youData, true)
   petLayer.appendChild(youWrapper)
@@ -377,7 +415,7 @@ export function buildPark(root: Root, game: GameState) {
       if (p.id === game.playerId) return
       const w = makePetWrapper(p, false)
       petLayer.appendChild(w)
-      peers.set(p.id, { data: p, wrapper: w, phase: Math.random() * Math.PI * 2 })
+      peers.set(p.id, { data: p, wrapper: w, wander: newWanderState(p.x) })
     })
     updateCount()
   })
@@ -386,7 +424,7 @@ export function buildPark(root: Root, game: GameState) {
     if (p.id === game.playerId || peers.has(p.id)) return
     const w = makePetWrapper(p, false)
     petLayer.appendChild(w)
-    peers.set(p.id, { data: p, wrapper: w, phase: Math.random() * Math.PI * 2 })
+    peers.set(p.id, { data: p, wrapper: w, wander: newWanderState(p.x) })
     updateCount()
   })
 
@@ -397,13 +435,10 @@ export function buildPark(root: Root, game: GameState) {
     updateCount()
   })
 
-  socket.on('player:move', ({ id, x, y }: { id: string; x: number; y: number }) => {
+  socket.on('player:move', ({ id, x }: { id: string; x: number; y: number }) => {
     const peer = peers.get(id)
-    if (peer) {
-      const dir = x > peer.data.x ? 1 : x < peer.data.x ? -1 : 0
-      if (dir !== 0) setFacing(peer.wrapper, dir)
-      peer.data.x = x; peer.data.y = y
-    }
+    // サーバー座標をローカルのwander目標にソフト補正するだけ（急テレポートしない）
+    if (peer) peer.wander.targetX = x
   })
 
   socket.on('park:chat', ({ id, message }: { id: string; message: string }) => {
@@ -431,21 +466,21 @@ export function buildPark(root: Root, game: GameState) {
   function tick() {
     const now = performance.now()
 
-    // 自分を自動歩行（固有の位相で上下ボブ）
-    youData.x += youData.dx
-    if (youData.x >= 980) { youData.dx = -Math.abs(youData.dx); youData.facing = -1 }
-    if (youData.x <= 80)  { youData.dx =  Math.abs(youData.dx); youData.facing =  1 }
-    setFacing(youWrapper, youData.facing)
-    setPetPos(youWrapper, youData.x, youData.y, Math.abs(Math.sin((now + youData.phase * 300) / 300)) * 4)
+    // 自分
+    const youBob = stepWander(youWander, now)
+    setFacing(youWrapper, youWander.facing)
+    setPetPos(youWrapper, youWander.x, youWander.y, youBob)
 
-    // 他プレイヤー（固有の位相でボブをずらす）
+    // 他プレイヤー（各自ローカル歩行 + サーバー座標へソフト補正済み）
     peers.forEach(peer => {
-      setPetPos(peer.wrapper, peer.data.x, peer.data.y, Math.abs(Math.sin((now + peer.phase * 300) / 300)) * 4)
+      const bob = stepWander(peer.wander, now)
+      setFacing(peer.wrapper, peer.wander.facing)
+      setPetPos(peer.wrapper, peer.wander.x, peer.wander.y, bob)
     })
 
-    // move を 100ms ごとに送信
-    if (now - lastMoveEmit > 100) {
-      socket.emit('move', { x: Math.round(youData.x), y: youData.y })
+    // move を 150ms ごとに送信（サーバー負荷軽減）
+    if (now - lastMoveEmit > 150) {
+      socket.emit('move', { x: Math.round(youWander.x), y: youWander.y })
       lastMoveEmit = now
     }
 
