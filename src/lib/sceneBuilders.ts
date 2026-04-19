@@ -345,7 +345,12 @@ export function buildPark(root: Root, game: GameState) {
 
   // ── 自分のペット（game.petはgetterなので毎回最新値を取得）──
   const currentPet = game.pet
-  const youData: PeerData = { id: game.playerId, name: currentPet.name, species: currentPet.species, level: currentPet.lv, x: 540, y: 420 }
+  const youData: PeerData & { dx: number; facing: number } = {
+    id: game.playerId, name: currentPet.name, species: currentPet.species, level: currentPet.lv,
+    x: 540, y: 420,
+    dx: 0.8,    // 自動歩行速度（正=右）
+    facing: 1,  // 1=右向き -1=左向き
+  }
   const youWrapper = makePetWrapper(youData, true)
   petLayer.appendChild(youWrapper)
 
@@ -389,7 +394,11 @@ export function buildPark(root: Root, game: GameState) {
 
   socket.on('player:move', ({ id, x, y }: { id: string; x: number; y: number }) => {
     const peer = peers.get(id)
-    if (peer) { peer.data.x = x; peer.data.y = y }
+    if (peer) {
+      const dir = x > peer.data.x ? 1 : x < peer.data.x ? -1 : 0
+      if (dir !== 0) setFacing(peer.wrapper, dir)
+      peer.data.x = x; peer.data.y = y
+    }
   })
 
   socket.on('park:chat', ({ id, message }: { id: string; message: string }) => {
@@ -404,25 +413,35 @@ export function buildPark(root: Root, game: GameState) {
     }
   })
 
+  // ペットのcanvasに向き反転を適用するヘルパー
+  function setFacing(wrapper: HTMLElement, dir: number) {
+    const canvas = wrapper.querySelector('canvas')
+    if (canvas) canvas.style.transform = dir < 0 ? 'scaleX(-1)' : 'scaleX(1)'
+  }
+
   // ── アニメーションループ ──
   let rafId = 0
   let lastMoveEmit = 0
 
   function tick() {
     const now = performance.now()
-    const bob = Math.sin(now / 500) * 3
+    const bob = Math.abs(Math.sin(now / 300)) * 4  // 歩行ボブ（上下）
 
-    // 自分
+    // 自分を自動歩行
+    youData.x += youData.dx
+    if (youData.x >= 980) { youData.dx = -Math.abs(youData.dx); youData.facing = -1 }
+    if (youData.x <= 80)  { youData.dx =  Math.abs(youData.dx); youData.facing =  1 }
+    setFacing(youWrapper, youData.facing)
     setPetPos(youWrapper, youData.x, youData.y, bob)
 
-    // 他プレイヤー
+    // 他プレイヤー（受信座標をそのまま表示、向き判定なし）
     peers.forEach(peer => {
-      setPetPos(peer.wrapper, peer.data.x, peer.data.y, Math.sin(now / 500 + peer.data.x * 0.01) * 3)
+      setPetPos(peer.wrapper, peer.data.x, peer.data.y, Math.abs(Math.sin(now / 300 + peer.data.x * 0.01)) * 4)
     })
 
     // move を 100ms ごとに送信
     if (now - lastMoveEmit > 100) {
-      socket.emit('move', { x: youData.x, y: youData.y })
+      socket.emit('move', { x: Math.round(youData.x), y: youData.y })
       lastMoveEmit = now
     }
 
@@ -430,20 +449,13 @@ export function buildPark(root: Root, game: GameState) {
   }
   rafId = requestAnimationFrame(tick)
 
-  // ── キーボード移動 ──
+  // ── 矢印キーで方向上書き ──
   const keyHandler = (e: KeyboardEvent) => {
-    // チャット入力中は無視
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return
-    if (e.key === 'ArrowLeft')  { youData.x = Math.max(60,   youData.x - 16); e.preventDefault() }
-    if (e.key === 'ArrowRight') { youData.x = Math.min(1000, youData.x + 16); e.preventDefault() }
+    if (e.key === 'ArrowLeft')  { youData.dx = -Math.abs(youData.dx); youData.facing = -1; e.preventDefault() }
+    if (e.key === 'ArrowRight') { youData.dx =  Math.abs(youData.dx); youData.facing =  1; e.preventDefault() }
   }
   window.addEventListener('keydown', keyHandler)
-
-  // シーンクリック時・表示直後にフォーカスを設定してキー入力を受け取る
-  root.setAttribute('tabindex', '-1')
-  root.style.outline = 'none'
-  setTimeout(() => root.focus(), 100)
-  root.addEventListener('click', () => root.focus())
 
   // ── チャットドック ──
   const chatDock = el('div')
