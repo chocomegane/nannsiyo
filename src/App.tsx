@@ -59,7 +59,7 @@ export default function App() {
   }, [loggedIn])
 
   function scheduleSave() {
-    if (!playerIdRef.current) return
+    if (!playerIdRef.current || playerIdRef.current.startsWith('guest-')) return
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
       const pet = usePetStore.getState().pet
@@ -69,9 +69,17 @@ export default function App() {
     }, 2000)
   }
 
-  const handleLoginSuccess = async (playerId: string, playerName: string, petName?: string, petSpecies?: Species) => {
-    localStorage.setItem(PLAYER_ID_KEY, playerId)
+  const handleLoginSuccess = async (playerId: string, playerName: string, petName?: string, petSpecies?: Species, guest?: boolean) => {
     playerIdRef.current = playerId
+    if (guest) {
+      usePlayerStore.setState({ playerName })
+      if (petName && petSpecies) {
+        usePetStore.setState((s) => ({ pet: { ...s.pet, name: petName, species: petSpecies, eatCount: {} } }))
+      }
+      setLoggedIn(true)
+      return
+    }
+    localStorage.setItem(PLAYER_ID_KEY, playerId)
     const data = await loadState(playerId)
     if (data) {
       applyState(data)

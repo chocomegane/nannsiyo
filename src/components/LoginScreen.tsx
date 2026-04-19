@@ -4,7 +4,7 @@ import type { Species } from '../types'
 import PixelPetCanvas from './PixelPetCanvas'
 
 interface Props {
-  onSuccess: (playerId: string, playerName: string, petName?: string, petSpecies?: Species) => void
+  onSuccess: (playerId: string, playerName: string, petName?: string, petSpecies?: Species, guest?: boolean) => void
 }
 
 const SPECIES_LIST: { species: Species; label: string; desc: string }[] = [
@@ -24,7 +24,15 @@ export default function LoginScreen({ onSuccess }: Props) {
   const [petSpecies, setPetSpecies] = useState<Species>('dragon')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [pendingPlayer, setPendingPlayer] = useState<{ id: string; name: string } | null>(null)
+  const [pendingPlayer, setPendingPlayer] = useState<{ id: string; name: string; guest?: boolean } | null>(null)
+
+  const handleGuest = () => {
+    const guestId = 'guest-' + Math.random().toString(36).slice(2, 10)
+    setPendingPlayer({ id: guestId, name: 'ゲスト', guest: true })
+    setPetName('ぼくのペット')
+    setStep(2)
+    setError('')
+  }
 
   const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,7 +57,7 @@ export default function LoginScreen({ onSuccess }: Props) {
     e.preventDefault()
     if (!petName.trim()) { setError('ペットの名前を入力してください'); return }
     if (!pendingPlayer) return
-    onSuccess(pendingPlayer.id, pendingPlayer.name, petName.trim(), petSpecies)
+    onSuccess(pendingPlayer.id, pendingPlayer.name, petName.trim(), petSpecies, pendingPlayer.guest)
   }
 
   const switchMode = (m: 'login' | 'register') => { setMode(m); setError(''); setStep(1) }
@@ -95,6 +103,12 @@ export default function LoginScreen({ onSuccess }: Props) {
                 {loading ? '処理中...' : mode === 'login' ? 'ログイン' : '次へ →'}
               </button>
             </form>
+            <div style={{ textAlign: 'center', marginTop: 14 }}>
+              <span style={{ fontSize: 11, color: 'var(--ink-2)' }}>登録なしで試したい方 → </span>
+              <button onClick={handleGuest} className="mg-btn" style={{ fontSize: 11, padding: '2px 10px', display: 'inline-flex' }}>
+                ゲストで遊ぶ
+              </button>
+            </div>
           </>
         )}
 
@@ -106,6 +120,11 @@ export default function LoginScreen({ onSuccess }: Props) {
               </div>
               <h2 style={{ margin: 0, fontSize: 16 }}>ペットを選ぼう！</h2>
               <p style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 4 }}>最初のパートナーを決めてください</p>
+              {pendingPlayer?.guest && (
+                <p style={{ fontSize: 11, color: 'var(--accent)', marginTop: 4, background: 'var(--paper-2)', borderRadius: 6, padding: '4px 8px' }}>
+                  ゲストモード：進行データはブラウザを閉じると消えます
+                </p>
+              )}
             </div>
 
             <form onSubmit={handleStep2} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
