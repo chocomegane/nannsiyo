@@ -1,16 +1,266 @@
 @import "tailwindcss";
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+:root {
+  --ink:      #2a2420;
+  --ink-2:    #5a4f47;
+  --ink-3:    #9a8f85;
+  --paper:    #f7f2e8;
+  --paper-2:  #ede6d4;
+  --paper-3:  #e2d8bf;
+  --accent:   #c8553d;
+  --accent-2: #6b8e7f;
+  --accent-3: #d4a24c;
+  --accent-4: #7a6cab;
+  --hi:       #f5e4b3;
+  --rad:      10px;
 }
 
-body {
-  font-family: system-ui, sans-serif;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100vh; width: 100vw; overflow: hidden;
+  background: #d8cfb8;
+  color: var(--ink);
+  font-family: 'Klee One', system-ui, sans-serif;
 }
 
-#root {
-  width: 100%;
-  min-height: 100vh;
+button { font-family: inherit; }
+img, canvas { image-rendering: pixelated; }
+
+#root { width: 100%; height: 100vh; display: grid; place-items: center; }
+
+/* ── Game frame ── */
+.mg-stage { position: fixed; inset: 0; display: grid; place-items: center; }
+
+.mg-frame {
+  width: 1280px; height: 800px;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: 8px 8px 0 var(--ink);
+  position: relative; overflow: hidden;
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  grid-template-rows: 52px 1fr;
+  transform-origin: center center;
+}
+
+/* ── Sidebar ── */
+.mg-sidebar {
+  grid-row: 1 / span 2; grid-column: 1;
+  background: var(--paper-2);
+  border-right: 3px solid var(--ink);
+  display: flex; flex-direction: column;
+  padding: 14px 12px; gap: 6px;
+}
+
+.mg-logo {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px; line-height: 1.6;
+  color: var(--ink);
+  padding: 6px 4px 10px;
+  border-bottom: 2px dashed var(--ink-3);
+  margin-bottom: 6px;
+}
+.mg-logo .tag {
+  font-family: 'Klee One', sans-serif;
+  font-size: 11px; color: var(--ink-2);
+  display: block; margin-top: 3px;
+}
+
+.mg-navbtn {
+  appearance: none; border: 2px solid transparent;
+  background: transparent; color: var(--ink);
+  text-align: left; padding: 8px 10px;
+  font-size: 14px; cursor: pointer;
+  display: flex; align-items: center; gap: 10px;
+  border-radius: var(--rad); font-weight: 600;
+  font-family: 'Klee One', sans-serif;
+  transition: background 0.1s;
+}
+.mg-navbtn:hover { background: var(--paper); }
+.mg-navbtn.active {
+  background: var(--paper);
+  border-color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.mg-navbtn .ic { font-size: 16px; width: 20px; text-align: center; }
+.mg-navbtn .badge {
+  margin-left: auto; background: var(--accent); color: #fff;
+  font-size: 10px; padding: 1px 6px; border-radius: 10px;
+}
+
+.mg-player-card {
+  margin-top: auto; padding: 10px;
+  border: 2px solid var(--ink);
+  background: var(--paper); border-radius: var(--rad);
+  font-size: 12px; box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+}
+.mg-player-card .name { font-weight: 700; font-size: 13px; }
+.mg-player-card .row {
+  display: flex; justify-content: space-between;
+  color: var(--ink-2); font-size: 11px; margin-top: 4px;
+}
+
+/* ── HUD ── */
+.mg-hud {
+  grid-row: 1; grid-column: 2;
+  background: var(--paper);
+  border-bottom: 3px solid var(--ink);
+  display: flex; align-items: center;
+  padding: 0 18px; gap: 12px;
+}
+.mg-hud .title { font-weight: 700; font-size: 16px; }
+.mg-hud .spacer { flex: 1; }
+
+/* ── Scene ── */
+.mg-scene {
+  grid-row: 2; grid-column: 2;
+  position: relative; overflow: hidden;
+}
+
+/* ── Generic components ── */
+.mg-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 2px solid var(--ink);
+  background: var(--paper-2);
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 13px; font-weight: 600;
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer; font-family: 'Klee One', sans-serif;
+  white-space: nowrap;
+}
+.mg-chip.accent  { background: var(--accent);   color: #fff; }
+.mg-chip.mustard { background: var(--accent-3); }
+.mg-chip.sage    { background: var(--accent-2); color: #fff; }
+.mg-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.mg-btn {
+  appearance: none; font-family: 'Klee One', sans-serif;
+  font-size: 13px; font-weight: 700;
+  padding: 8px 14px; border: 2px solid var(--ink);
+  background: var(--paper); border-radius: 8px;
+  cursor: pointer; box-shadow: 3px 3px 0 var(--ink);
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: transform 0.05s, box-shadow 0.05s;
+  color: var(--ink);
+}
+.mg-btn:hover  { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+.mg-btn:active { transform: translate(2px,2px);   box-shadow: 1px 1px 0 var(--ink); }
+.mg-btn.primary { background: var(--accent);   color: #fff; }
+.mg-btn.mustard { background: var(--accent-3); }
+.mg-btn.sage    { background: var(--accent-2); color: #fff; }
+.mg-btn.purple  { background: var(--accent-4); color: #fff; }
+.mg-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: 3px 3px 0 var(--ink); }
+
+.mg-panel {
+  background: var(--paper-2); border: 2px solid var(--ink);
+  border-radius: var(--rad); box-shadow: 4px 4px 0 var(--ink);
+}
+
+/* ── Modal overlay ── */
+.mg-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(42,36,32,0.45);
+}
+.mg-modal {
+  background: var(--paper); border: 3px solid var(--ink);
+  border-radius: 14px; box-shadow: 6px 6px 0 var(--ink);
+  padding: 22px; min-width: 280px; max-width: 360px;
+  max-height: 80vh; overflow-y: auto;
+  font-family: 'Klee One', sans-serif;
+}
+.mg-modal h2 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+
+/* ── Input ── */
+.mg-input {
+  font-family: 'Klee One', sans-serif;
+  border: 2px solid var(--ink); border-radius: 8px;
+  padding: 7px 11px; font-size: 13px;
+  background: #fff; width: 100%;
+  outline: none;
+}
+.mg-input:focus { box-shadow: 0 0 0 2px var(--accent-4); }
+
+/* ── Status bars ── */
+.mg-bar {
+  height: 8px; background: var(--paper);
+  border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden;
+}
+.mg-bar > span { display: block; height: 100%; }
+
+/* ── Toast ── */
+.mg-toast {
+  background: var(--paper); border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  padding: 8px 14px; font-size: 13px; font-weight: 600;
+  border-radius: var(--rad); font-family: 'Klee One', sans-serif;
+}
+
+/* ── Status pop bubble ── */
+/* ── scenes-all.js 互換クラス（mg-プレフィックスなし版） ── */
+.btn {
+  appearance: none; font-family: 'Klee One', sans-serif;
+  font-size: 13px; font-weight: 700;
+  padding: 8px 14px; border: 2px solid var(--ink);
+  background: var(--paper); border-radius: 8px;
+  cursor: pointer; box-shadow: 3px 3px 0 var(--ink);
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: transform 0.05s, box-shadow 0.05s;
+  color: var(--ink);
+}
+.btn:hover  { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+.btn:active { transform: translate(2px,2px);   box-shadow: 1px 1px 0 var(--ink); }
+.btn.primary { background: var(--accent);   color: #fff; }
+.btn.mustard { background: var(--accent-3); }
+.btn.sage    { background: var(--accent-2); color: #fff; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.panel {
+  background: var(--paper-2); border: 2px solid var(--ink);
+  border-radius: var(--rad); box-shadow: 4px 4px 0 var(--ink);
+}
+
+.bar {
+  height: 8px; background: var(--paper);
+  border: 1.5px solid var(--ink); border-radius: 6px; overflow: hidden;
+  margin: 2px 0 6px;
+}
+.bar > span { display: block; height: 100%; }
+.bar .hap { background: var(--accent); }
+.bar .hun { background: var(--accent-3); }
+.bar .xp  { background: var(--accent-2); }
+
+.status-pop {
+  position: absolute;
+  background: var(--hi); border: 2px solid var(--ink);
+  border-radius: 12px; padding: 8px 12px;
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 12px; min-width: 200px; z-index: 20;
+}
+.status-pop::after {
+  content: ''; position: absolute; left: 16px; bottom: -10px;
+  width: 14px; height: 14px; background: var(--hi);
+  border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  transform: rotate(45deg);
+}
+.status-pop .nm { font-weight: 700; margin-bottom: 4px; font-size: 13px; }
+
+.drop-item { transition: transform 0.1s; }
+.drop-item:hover { transform: translate(-50%,-50%) scale(1.15) !important; }
+
+/* ── scenes-all.js ── */
+.mg-status-pop {
+  position: absolute;
+  background: var(--hi); border: 2px solid var(--ink);
+  border-radius: 12px; padding: 8px 12px;
+  box-shadow: 3px 3px 0 var(--ink);
+  font-size: 12px; min-width: 200px; z-index: 20;
+}
+.mg-status-pop::after {
+  content: ''; position: absolute; left: 16px; bottom: -10px;
+  width: 14px; height: 14px; background: var(--hi);
+  border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  transform: rotate(45deg);
 }

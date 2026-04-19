@@ -1,7 +1,8 @@
 /* Pixel Pet Renderer – TypeScript port of pixelpet.js
    Draws 32×32 sprites onto a canvas at arbitrary scale */
 
-export type Species = 'dragon' | 'unicorn' | 'slime' | 'phoenix' | 'golem'
+import type { Species } from '../types'
+export type { Species }
 
 interface Palette {
   body: string; light: string; dark: string; belly: string
@@ -27,6 +28,7 @@ function tinyDragon(stage: number): Grid {
   const S = makeGrid(); const put = makePut(S)
   if (stage===1) {
     for (let y=10;y<26;y++) for (let x=8;x<24;x++) { const dx=x-16,dy=y-18; if (Math.sqrt(dx*dx+dy*dy*1.2)<7.5) put(x,y,'b') }
+    for (let y=10;y<26;y++) for (let x=8;x<24;x++) { if (S[y][x]!=='b') continue; if (S[y-1]?.[x]==='.') put(x,y-1,'d') }
     for (let y=18;y<24;y++) for (let x=13;x<19;x++) if (S[y][x]==='b') put(x,y,'y')
     put(12,9,'d'); put(13,9,'d'); put(12,10,'b'); put(19,9,'d'); put(20,9,'d'); put(20,10,'b')
     put(6,14,'d'); put(7,14,'b'); put(7,15,'b'); put(6,15,'d')
@@ -119,9 +121,8 @@ function tinySlime(stage: number): Grid {
     put(13,21,'e'); put(19,21,'e'); put(8,26,'b'); put(24,26,'b')
   } else {
     for (let y=8;y<28;y++) for (let x=4;x<28;x++) { const dx=x-16,dy=y-22; if (dx*dx*0.85+dy*dy*1.6<140) put(x,y,'b') }
-    const crown = [12,13,14,15,16,17,18,19,20]
-    crown.forEach((cx,i) => put(cx, i%2===0?4:3, 'h'))
-    crown.forEach(cx => put(cx, 5, 'h'))
+    put(12,4,'h'); put(13,3,'h'); put(14,4,'h'); put(15,3,'h'); put(16,2,'h'); put(17,3,'h'); put(18,4,'h'); put(19,3,'h'); put(20,4,'h')
+    for (let cx=12;cx<=20;cx++) put(cx,5,'h')
     put(16,6,'d'); put(13,6,'d'); put(19,6,'d')
     put(11,14,'e'); put(12,14,'e'); put(20,14,'e'); put(21,14,'e')
     put(12,13,'w'); put(21,13,'w')
@@ -257,4 +258,23 @@ export function drawPet(
     ctx.fillStyle = 'rgba(0,0,0,0.18)'
     ctx.fillRect(px + 4 * scale, py + 30 * scale, 24 * scale, 3 * scale)
   }
+}
+
+export function createPetCanvas(species: Species, stage: number, size = 128): HTMLCanvasElement {
+  const canvas = document.createElement('canvas')
+  canvas.width = size; canvas.height = size
+  canvas.style.width = size + 'px'; canvas.style.height = size + 'px'
+  canvas.style.imageRendering = 'pixelated'
+  const ctx = canvas.getContext('2d')!
+  const scale = Math.max(1, Math.floor(size / 32))
+  const start = performance.now()
+  let raf = 0
+  function loop() {
+    ctx.clearRect(0, 0, size, size)
+    drawPet(ctx, species, stage, 0, 0, scale, { time: performance.now() - start })
+    raf = requestAnimationFrame(loop)
+  }
+  loop()
+  ;(canvas as HTMLCanvasElement & { destroy: () => void }).destroy = () => cancelAnimationFrame(raf)
+  return canvas
 }

@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<title>ペット育成ゲーム — ハイfiプロトタイプ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&family=DotGothic16&family=Press+Start+2P&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #2a2420;
+    --ink-2: #5a4f47;
+    --ink-3: #9a8f85;
+    --paper: #f7f2e8;
+    --paper-2: #ede6d4;
+    --paper-3: #e2d8bf;
+    --accent: #c8553d;
+    --accent-2: #6b8e7f;
+    --accent-3: #d4a24c;
+    --accent-4: #7a6cab;
+    --hi: #f5e4b3;
+    --rad: 10px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #d8cfb8; color: var(--ink); font-family: 'Klee One', system-ui, sans-serif; overflow: hidden; height: 100vh; width:100vw;}
+  button { font-family: inherit; }
+  img { image-rendering: pixelated; }
+
+  /* Game frame — fixed 1280x800, letterboxed */
+  #stage { position: fixed; inset: 0; display: grid; place-items: center; }
+  #frame {
+    width: 1280px; height: 800px;
+    background: var(--paper);
+    border: 3px solid var(--ink);
+    box-shadow: 8px 8px 0 var(--ink);
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    grid-template-rows: 52px 1fr;
+  }
+
+  /* Sidebar */
+  #sidebar {
+    grid-row: 1 / span 2; grid-column: 1;
+    background: var(--paper-2);
+    border-right: 3px solid var(--ink);
+    display: flex; flex-direction: column;
+    padding: 14px 12px;
+    gap: 6px;
+    position: relative;
+  }
+  .logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px; line-height: 1.5;
+    color: var(--ink);
+    padding: 6px 4px 10px;
+    border-bottom: 2px dashed var(--ink-3);
+    margin-bottom: 6px;
+  }
+  .logo .tag { font-family: 'Klee One'; font-size: 11px; color: var(--ink-2); display:block; margin-top:3px;}
+  .navbtn {
+    appearance: none; border: 2px solid transparent;
+    background: transparent; color: var(--ink);
+    text-align: left; padding: 8px 10px;
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; gap: 10px;
+    border-radius: var(--rad);
+    font-weight: 600;
+  }
+  .navbtn:hover { background: var(--paper); }
+  .navbtn.active {
+    background: var(--paper);
+    border-color: var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .navbtn .ic { font-size: 18px; width: 22px; text-align: center;}
+  .navbtn .badge { margin-left:auto; background: var(--accent); color:#fff; font-size:10px; padding:1px 6px; border-radius:10px; }
+
+  .player-card {
+    margin-top: auto; padding: 10px; border: 2px solid var(--ink);
+    background: var(--paper); border-radius: var(--rad);
+    font-size: 12px;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .player-card .name { font-weight: 700; font-size: 13px; }
+  .player-card .row { display:flex; justify-content:space-between; color: var(--ink-2); font-size:11px; margin-top:4px;}
+
+  /* HUD */
+  #hud {
+    grid-row: 1; grid-column: 2;
+    background: var(--paper);
+    border-bottom: 3px solid var(--ink);
+    display: flex; align-items: center; padding: 0 18px;
+    gap: 14px;
+  }
+  #hud .title { font-weight: 700; font-size: 17px; letter-spacing: 0.02em; }
+  #hud .spacer { flex: 1; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 2px solid var(--ink);
+    background: var(--paper-2);
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+    box-shadow: 2px 2px 0 var(--ink);
+    cursor: pointer;
+  }
+  .chip.accent { background: var(--accent); color: #fff; }
+  .chip.mustard { background: var(--accent-3); }
+  .chip.sage { background: var(--accent-2); color: #fff; }
+
+  /* Stage (scene area) */
+  #scene {
+    grid-row: 2; grid-column: 2;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Pop toasts */
+  #toasts {
+    position: absolute; right: 16px; top: 16px; z-index: 50;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    background: var(--paper); border: 2px solid var(--ink);
+    box-shadow: 3px 3px 0 var(--ink);
+    padding: 8px 14px; font-size: 13px; font-weight: 600;
+    border-radius: var(--rad);
+    animation: pop 0.3s ease-out;
+  }
+  @keyframes pop { from { transform: translateY(-10px); opacity:0; } }
+
+  /* Pet status floating bubble */
+  .status-pop {
+    position: absolute;
+    background: var(--hi);
+    border: 2px solid var(--ink);
+    border-radius: 12px;
+    padding: 8px 12px;
+    box-shadow: 3px 3px 0 var(--ink);
+    font-size: 12px;
+    min-width: 200px;
+    z-index: 20;
+  }
+  .status-pop::after {
+    content: ''; position: absolute; left: 16px; bottom: -10px;
+    width: 14px; height: 14px; background: var(--hi);
+    border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+    transform: rotate(45deg);
+  }
+  .status-pop .nm { font-weight: 700; margin-bottom: 4px; font-size: 13px; }
+  .bar { height: 8px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 6px; overflow:hidden; margin: 2px 0 6px; }
+  .bar > span { display:block; height:100%; }
+  .bar .hap { background: var(--accent); }
+  .bar .hun { background: var(--accent-3); }
+  .bar .xp { background: var(--accent-2); }
+
+  /* generic utility */
+  .panel { background: var(--paper-2); border: 2px solid var(--ink); border-radius: var(--rad); box-shadow: 4px 4px 0 var(--ink); }
+  .btn {
+    appearance: none; font-family: inherit; font-size: 13px; font-weight: 700;
+    padding: 8px 14px; border: 2px solid var(--ink); background: var(--paper);
+    border-radius: 8px; cursor: pointer; box-shadow: 3px 3px 0 var(--ink);
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+  .btn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.mustard { background: var(--accent-3); }
+  .btn.sage { background: var(--accent-2); color: #fff; }
+
+  /* Tweaks panel */
+  #tweaks {
+    position: fixed; right: 16px; bottom: 16px; width: 260px;
+    background: var(--paper); border: 2px solid var(--ink); border-radius: 12px;
+    box-shadow: 5px 5px 0 var(--ink); padding: 14px; z-index: 200; display: none;
+    font-size: 13px;
+  }
+  #tweaks.on { display: block; }
+  #tweaks h4 { margin: 0 0 8px; font-size: 14px; }
+  #tweaks .row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; gap: 8px; }
+  #tweaks select { font-family: inherit; border: 1.5px solid var(--ink); padding: 3px 6px; background: #fff; }
+
+  /* Scene transitions */
+  .scene-root { position: absolute; inset: 0; }
+
+  /* Pet sprite placeholder (32x32 scaled) */
+  canvas.pet { image-rendering: pixelated; }
+
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="frame" data-screen-label="game-frame">
+    <aside id="sidebar">
+      <div class="logo">
+        MOFU<br/>GARDEN
+        <span class="tag">もふガーデン α</span>
+      </div>
+      <button class="navbtn active" data-scene="room"><span class="ic">🏠</span>じぶんの部屋</button>
+      <button class="navbtn" data-scene="park"><span class="ic">🌳</span>ひかりの公園<span class="badge">14</span></button>
+      <button class="navbtn" data-scene="dungeon"><span class="ic">⚔️</span>ダンジョン</button>
+      <button class="navbtn" data-scene="lottery"><span class="ic">🎰</span>宝くじ店</button>
+      <button class="navbtn" data-scene="ranking"><span class="ic">🏆</span>ランキング</button>
+      <button class="navbtn" data-scene="furniture"><span class="ic">🛋️</span>インテリア</button>
+      <button class="navbtn" data-scene="friend"><span class="ic">👫</span>フレンド部屋</button>
+
+      <div class="player-card">
+        <div class="name">🧑‍🌾 あなた · Lv.12</div>
+        <div class="row"><span>ギルド</span><span>みどりの丘</span></div>
+        <div class="row"><span>フレンド</span><span>8人</span></div>
+        <div class="row" style="margin-top:6px; color: var(--accent)"><span>⚙ アカウント</span><span>▸</span></div>
+      </div>
+    </aside>
+
+    <div id="hud">
+      <span class="title" id="sceneTitle">🏠 じぶんの部屋</span>
+      <span class="spacer"></span>
+      <span class="chip mustard">🪙 <span id="coin">1,240</span> G</span>
+      <span class="chip">🔔 3</span>
+      <span class="chip sage">💬 チャット</span>
+    </div>
+
+    <main id="scene"></main>
+
+    <div id="toasts"></div>
+  </div>
+</div>
+
+<div id="tweaks">
+  <h4>Tweaks</h4>
+  <div class="row">
+    <span>シーン</span>
+    <select id="tw-scene">
+      <option value="room">自室</option>
+      <option value="park">公園</option>
+      <option value="dungeon">ダンジョン</option>
+      <option value="lottery">宝くじ店</option>
+      <option value="ranking">ランキング</option>
+      <option value="furniture">インテリア</option>
+      <option value="friend">フレンド部屋</option>
+    </select>
+  </div>
+  <div class="row">
+    <span>ペット種族</span>
+    <select id="tw-pet">
+      <option value="dragon">ドラゴン 🐉</option>
+      <option value="unicorn">ユニコーン 🦄</option>
+      <option value="slime">スライム 🟢</option>
+      <option value="phoenix">フェニックス 🦅</option>
+      <option value="golem">ゴーレム 🪨</option>
+    </select>
+  </div>
+  <div class="row">
+    <span>ペット進化段階</span>
+    <select id="tw-stage">
+      <option value="1">ちび (Lv.1)</option>
+      <option value="2">通常 (Lv.20)</option>
+      <option value="3">最終 (Lv.50)</option>
+    </select>
+  </div>
+  <div class="row">
+    <span>時間帯</span>
+    <select id="tw-time">
+      <option value="day">昼</option>
+      <option value="dusk">夕方</option>
+      <option value="night">夜</option>
+    </select>
+  </div>
+</div>
+
+<script>
+/* ===== Auto-scale stage ===== */
+function rescale(){
+  const f = document.getElementById('frame');
+  const sx = window.innerWidth / 1280;
+  const sy = window.innerHeight / 800;
+  const s = Math.min(sx, sy, 1.5);
+  f.style.transform = `scale(${s})`;
+  f.style.transformOrigin = 'center center';
+}
+window.addEventListener('resize', rescale);
+rescale();
+
+/* ===== State ===== */
+window.GAME = {
+  coin: 1240,
+  pet: { species: 'dragon', stage: 1, lv: 12, xp: 0.55, hap: 0.72, hun: 0.41, name: 'ほのお' },
+  time: 'day',
+  toast(msg){
+    const t = document.createElement('div'); t.className='toast'; t.textContent=msg;
+    document.getElementById('toasts').appendChild(t);
+    setTimeout(()=>t.remove(), 2600);
+  },
+  setCoin(n){ this.coin = Math.max(0, n); document.getElementById('coin').textContent = this.coin.toLocaleString(); }
+};
+
+/* ===== Scenes registry ===== */
+window.SCENES = {};
+window.registerScene = function(k, fn){ SCENES[k] = fn; };
+
+function showScene(key){
+  const el = document.getElementById('scene');
+  el.innerHTML = '';
+  const root = document.createElement('div'); root.className='scene-root'; root.dataset.screenLabel = key;
+  el.appendChild(root);
+  (SCENES[key] || (()=>{ root.textContent = '未実装'; }))(root);
+  document.querySelectorAll('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.scene === key));
+  const titles = { room:'🏠 じぶんの部屋', park:'🌳 ひかりの公園', dungeon:'⚔️ ダンジョン', lottery:'🎰 宝くじ店', ranking:'🏆 ランキング', furniture:'🛋️ インテリアショップ', friend:'👫 もふ さんの部屋' };
+  document.getElementById('sceneTitle').textContent = titles[key] || '';
+  localStorage.setItem('mg_scene', key);
+  document.getElementById('tw-scene').value = key;
+}
+document.querySelectorAll('.navbtn').forEach(b => b.addEventListener('click', () => showScene(b.dataset.scene)));
+
+/* ===== Tweaks ===== */
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "scene": "room",
+  "petSpecies": "dragon",
+  "petStage": "1",
+  "time": "day"
+}/*EDITMODE-END*/;
+let tweaks = { ...TWEAK_DEFAULTS };
+const tweaksEl = document.getElementById('tweaks');
+function applyTweaks(){
+  GAME.pet.species = tweaks.petSpecies;
+  GAME.pet.stage = parseInt(tweaks.petStage,10);
+  GAME.time = tweaks.time;
+  document.body.dataset.time = tweaks.time;
+  document.getElementById('tw-pet').value = tweaks.petSpecies;
+  document.getElementById('tw-stage').value = tweaks.petStage;
+  document.getElementById('tw-time').value = tweaks.time;
+  document.getElementById('tw-scene').value = tweaks.scene;
+}
+window.addEventListener('message', e=>{
+  if (!e.data) return;
+  if (e.data.type==='__activate_edit_mode') tweaksEl.classList.add('on');
+  if (e.data.type==='__deactivate_edit_mode') tweaksEl.classList.remove('on');
+});
+window.parent.postMessage({ type:'__edit_mode_available' }, '*');
+
+function persist(){ window.parent.postMessage({ type:'__edit_mode_set_keys', edits: tweaks }, '*'); }
+document.getElementById('tw-scene').addEventListener('change', e=>{ tweaks.scene=e.target.value; showScene(e.target.value); persist(); });
+document.getElementById('tw-pet').addEventListener('change', e=>{ tweaks.petSpecies=e.target.value; applyTweaks(); showScene(tweaks.scene); persist(); });
+document.getElementById('tw-stage').addEventListener('change', e=>{ tweaks.petStage=e.target.value; applyTweaks(); showScene(tweaks.scene); persist(); });
+document.getElementById('tw-time').addEventListener('change', e=>{ tweaks.time=e.target.value; applyTweaks(); showScene(tweaks.scene); persist(); });
+
+applyTweaks();
+</script>
+<script src="pixelpet.js"></script>
+<script src="scenes-all.js"></script>
+<script>
+  const start = tweaks.scene || localStorage.getItem('mg_scene') || 'room';
+  showScene(start);
+</script>
+</body>
+</html>

@@ -50,7 +50,7 @@ export default function Lottery() {
 
   return (
     <div
-      className="relative w-full h-screen overflow-hidden flex flex-col items-center justify-center gap-6"
+      className="relative w-full h-full overflow-hidden flex flex-col items-center justify-center gap-6"
       style={{ background: 'linear-gradient(135deg, #1a0533 0%, #4a0080 50%, #1a0533 100%)' }}
     >
       {STARS.map((s, i) => (

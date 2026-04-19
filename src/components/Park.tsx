@@ -88,7 +88,7 @@ export default function Park() {
 
   return (
     <div
-      className="relative w-full h-screen overflow-hidden"
+      className="relative w-full h-full overflow-hidden"
       style={{ background: 'linear-gradient(180deg, #87ceeb 0%, #b8f0a8 55%, #6aa84f 55%, #4a7c3f 100%)' }}
     >
       {CLOUDS.map((c, i) => (

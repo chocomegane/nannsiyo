@@ -9,12 +9,12 @@ import FriendPanel from './FriendPanel'
 interface Props {
   playerId: string
   onLogout: () => void
+  onClose?: () => void
 }
 
 type View = 'menu' | 'info' | 'password'
 
-export default function AccountMenu({ playerId, onLogout }: Props) {
-  const [open, setOpen] = useState(false)
+export default function AccountMenu({ playerId, onLogout, onClose }: Props) {
   const [view, setView] = useState<View>('menu')
   const [showStats, setShowStats] = useState(false)
   const [showGuild, setShowGuild] = useState(false)
@@ -29,7 +29,7 @@ export default function AccountMenu({ playerId, onLogout }: Props) {
   const money = usePlayerStore((s) => s.money)
   const pet = usePetStore((s) => s.pet)
 
-  const close = () => { setOpen(false); setView('menu'); setMsg(''); setCurrentPw(''); setNewPw(''); setConfirmPw('') }
+  const close = () => { setView('menu'); setMsg(''); setCurrentPw(''); setNewPw(''); setConfirmPw('') }
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,106 +41,78 @@ export default function AccountMenu({ playerId, onLogout }: Props) {
     if ('error' in result) { setMsg(result.error) } else { setMsg('パスワードを変更しました'); setCurrentPw(''); setNewPw(''); setConfirmPw('') }
   }
 
+  const handleClose = () => { close(); onClose?.() }
+
   return (
     <>
     {showStats && <StatsPanel onClose={() => setShowStats(false)} />}
     {showGuild && <GuildPanel onClose={() => setShowGuild(false)} />}
     {showFriend && <FriendPanel onClose={() => setShowFriend(false)} />}
-    <div className="relative z-[200] flex items-center gap-2">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="bg-white/90 rounded-2xl px-4 py-2 shadow-lg font-bold text-sm text-gray-700 hover:bg-white transition-colors flex items-center gap-1"
-      >
-        👤 {playerName}
-      </button>
 
-      {open && (
-        <div className="absolute top-12 right-0 bg-white rounded-2xl shadow-xl z-[200] w-64 overflow-hidden">
-          {view === 'menu' && (
-            <div className="p-3 flex flex-col gap-1">
-              <button onClick={() => setView('info')}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
-                📋 アカウント情報
-              </button>
-              <button onClick={() => { setOpen(false); setShowStats(true) }}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
-                📊 プレイ統計
-              </button>
-              <button onClick={() => { setOpen(false); setShowGuild(true) }}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
-                🏰 ギルド
-              </button>
-              <button onClick={() => { setOpen(false); setShowFriend(true) }}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
-                👥 フレンド
-              </button>
-              <button onClick={() => setView('password')}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 text-sm font-medium flex items-center gap-2">
-                🔑 パスワード変更
-              </button>
-              <hr className="my-1" />
-              <button onClick={() => { close(); onLogout() }}
-                className="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-sm font-medium text-red-500 flex items-center gap-2">
-                🚪 ログアウト
-              </button>
-            </div>
-          )}
+    <div className="mg-modal" style={{ width: 300 }} onClick={(e) => e.stopPropagation()}>
+      {view === 'menu' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h2 style={{ margin: 0 }}>⚙ アカウント</h2>
+            <button className="mg-btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={handleClose}>✕</button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <button className="mg-navbtn" onClick={() => setView('info')}>📋 アカウント情報</button>
+            <button className="mg-navbtn" onClick={() => { setShowStats(true) }}>📊 プレイ統計</button>
+            <button className="mg-navbtn" onClick={() => { setShowGuild(true) }}>🏰 ギルド</button>
+            <button className="mg-navbtn" onClick={() => { setShowFriend(true) }}>👥 フレンド</button>
+            <button className="mg-navbtn" onClick={() => setView('password')}>🔑 パスワード変更</button>
+            <hr style={{ borderColor: 'var(--ink-3)', margin: '2px 0' }} />
+            <button className="mg-navbtn" style={{ color: 'var(--accent)' }}
+              onClick={() => { handleClose(); onLogout() }}>
+              🚪 ログアウト
+            </button>
+          </div>
+        </>
+      )}
 
-          {view === 'info' && (
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <button onClick={() => setView('menu')} className="text-gray-400 hover:text-gray-600">←</button>
-                <p className="font-bold text-gray-700">アカウント情報</p>
+      {view === 'info' && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <button className="mg-btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setView('menu')}>←</button>
+            <h2 style={{ margin: 0 }}>アカウント情報</h2>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+            {[
+              ['プレイヤー名', playerName],
+              ['所持金', `${money.toLocaleString()}G`],
+              ['ペット', `${pet.name} Lv.${pet.level}`],
+              ['スキル解放数', `${pet.unlockedSkills.length}個`],
+            ].map(([label, val]) => (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--paper-2)', borderRadius: 8, padding: '6px 10px' }}>
+                <span style={{ color: 'var(--ink-2)' }}>{label}</span>
+                <span style={{ fontWeight: 700 }}>{val}</span>
               </div>
-              <div className="flex flex-col gap-2 text-sm">
-                <div className="flex justify-between bg-gray-50 rounded-xl px-3 py-2">
-                  <span className="text-gray-500">プレイヤー名</span>
-                  <span className="font-bold">{playerName}</span>
-                </div>
-                <div className="flex justify-between bg-gray-50 rounded-xl px-3 py-2">
-                  <span className="text-gray-500">所持金</span>
-                  <span className="font-bold text-yellow-600">{money.toLocaleString()}G</span>
-                </div>
-                <div className="flex justify-between bg-gray-50 rounded-xl px-3 py-2">
-                  <span className="text-gray-500">ペット</span>
-                  <span className="font-bold">{pet.name} Lv.{pet.level}</span>
-                </div>
-                <div className="flex justify-between bg-gray-50 rounded-xl px-3 py-2">
-                  <span className="text-gray-500">スキル解放数</span>
-                  <span className="font-bold">{pet.unlockedSkills.length}個</span>
-                </div>
-              </div>
-              <button onClick={close} className="mt-3 w-full py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-medium transition-colors">
-                閉じる
-              </button>
-            </div>
-          )}
+            ))}
+          </div>
+          <button className="mg-btn" style={{ marginTop: 12, width: '100%', justifyContent: 'center' }} onClick={handleClose}>閉じる</button>
+        </>
+      )}
 
-          {view === 'password' && (
-            <div className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <button onClick={() => { setView('menu'); setMsg('') }} className="text-gray-400 hover:text-gray-600">←</button>
-                <p className="font-bold text-gray-700">パスワード変更</p>
-              </div>
-              <form onSubmit={handleChangePassword} className="flex flex-col gap-2">
-                <input type="password" placeholder="現在のパスワード" value={currentPw}
-                  onChange={(e) => setCurrentPw(e.target.value)}
-                  className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
-                <input type="password" placeholder="新しいパスワード" value={newPw}
-                  onChange={(e) => setNewPw(e.target.value)}
-                  className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
-                <input type="password" placeholder="新しいパスワード（確認）" value={confirmPw}
-                  onChange={(e) => setConfirmPw(e.target.value)}
-                  className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" />
-                {msg && <p className={`text-xs text-center ${msg.includes('変更しました') ? 'text-green-500' : 'text-red-500'}`}>{msg}</p>}
-                <button type="submit" disabled={loading}
-                  className="py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-bold rounded-xl text-sm transition-colors">
-                  {loading ? '変更中...' : '変更する'}
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
+      {view === 'password' && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <button className="mg-btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => { setView('menu'); setMsg('') }}>←</button>
+            <h2 style={{ margin: 0 }}>パスワード変更</h2>
+          </div>
+          <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <input type="password" placeholder="現在のパスワード" value={currentPw}
+              onChange={(e) => setCurrentPw(e.target.value)} className="mg-input" />
+            <input type="password" placeholder="新しいパスワード" value={newPw}
+              onChange={(e) => setNewPw(e.target.value)} className="mg-input" />
+            <input type="password" placeholder="新しいパスワード（確認）" value={confirmPw}
+              onChange={(e) => setConfirmPw(e.target.value)} className="mg-input" />
+            {msg && <p style={{ fontSize: 12, textAlign: 'center', color: msg.includes('変更しました') ? 'var(--accent-2)' : 'var(--accent)' }}>{msg}</p>}
+            <button type="submit" disabled={loading} className="mg-btn primary" style={{ justifyContent: 'center' }}>
+              {loading ? '変更中...' : '変更する'}
+            </button>
+          </form>
+        </>
       )}
     </div>
     </>

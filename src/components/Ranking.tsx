@@ -33,7 +33,7 @@ export default function Ranking() {
 
   return (
     <div
-      className="relative w-full h-screen overflow-hidden flex flex-col"
+      className="relative w-full h-full overflow-hidden flex flex-col"
       style={{ background: 'linear-gradient(135deg, #1e3c72, #2a5298)' }}
     >
       <div className="absolute top-4 right-4 z-10">

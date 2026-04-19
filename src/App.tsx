@@ -8,21 +8,16 @@ import { PlayerIdContext } from './lib/playerContext'
 import { useFurnitureStore } from './store/furnitureStore'
 import { bgm, loadBgmTracks } from './lib/bgm'
 import LoginScreen from './components/LoginScreen'
-import Room from './components/Room'
-import Park from './components/Park'
-import Dungeon from './components/Dungeon'
-import Lottery from './components/Lottery'
-import Ranking from './components/Ranking'
-import FurnitureShop from './components/FurnitureShop'
+import Sidebar from './components/Sidebar'
+import Hud from './components/Hud'
+import SceneMount from './components/SceneMount'
 import type { Species } from './types'
 import './index.css'
 
-const SCENES = { room: Room, park: Park, dungeon: Dungeon, lottery: Lottery, ranking: Ranking, furniture: FurnitureShop }
 const PLAYER_ID_KEY = 'nannsiyo_player_id'
 
 export default function App() {
   const scene = useWorldStore((s) => s.scene)
-  const SceneComponent = SCENES[scene]
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const playerIdRef = useRef<string | null>(null)
@@ -100,11 +95,26 @@ export default function App() {
     setLoggedIn(false)
   }
 
+  useEffect(() => {
+    function rescale() {
+      const frame = document.querySelector<HTMLElement>('.mg-frame')
+      if (!frame) return
+      const sx = window.innerWidth  / 1280
+      const sy = window.innerHeight / 800
+      const s  = Math.min(sx, sy, 1.5)
+      frame.style.transform = `scale(${s})`
+    }
+    window.addEventListener('resize', rescale)
+    rescale()
+    return () => window.removeEventListener('resize', rescale)
+  }, [loggedIn])
+
   if (initializing) {
     return (
-      <div className="w-full h-screen flex items-center justify-center"
-        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-        <div className="text-white text-xl font-bold">読み込み中...</div>
+      <div className="mg-stage">
+        <div style={{ fontFamily: "'Press Start 2P', monospace", fontSize: 13, color: 'var(--ink-2)' }}>
+          読み込み中...
+        </div>
       </div>
     )
   }
@@ -113,18 +123,26 @@ export default function App() {
 
   return (
     <PlayerIdContext.Provider value={{ playerId: playerIdRef.current ?? '', logout: handleLogout }}>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={scene}
-          className="w-full h-screen"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <SceneComponent />
-        </motion.div>
-      </AnimatePresence>
+      <div className="mg-stage">
+        <div className="mg-frame">
+          <Sidebar onLogout={handleLogout} />
+          <Hud />
+          <main className="mg-scene">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={scene}
+                style={{ position: 'absolute', inset: 0 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+              >
+                <SceneMount sceneKey={scene} />
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
+      </div>
     </PlayerIdContext.Provider>
   )
 }

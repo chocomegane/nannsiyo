@@ -4,24 +4,19 @@ import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
 import { useWorldStore } from '../store/worldStore'
 import { useAchievementStore } from '../store/achievementStore'
-import { usePlayerId } from '../lib/playerContext'
 import { startDropLoop } from '../systems/dropSystem'
 import { ACHIEVEMENTS } from '../data/achievements'
 import { loadState } from '../lib/api'
 import type { Skill, FurnitureItem } from '../types'
 import Pet from './Pet'
 import DroppedItem from './DroppedItem'
-import MoneyDisplay from './MoneyDisplay'
 import InventoryPanel from './InventoryPanel'
 import FoodMenu from './FoodMenu'
 import SkillPanel from './SkillPanel'
 import LevelUpEffect from './LevelUpEffect'
 import SkillEffect from './SkillEffect'
-import Teleport from './Teleport'
-import AccountMenu from './AccountMenu'
 import RoomDecorations from './RoomDecorations'
 import PetOverlay from './PetOverlay'
-import BgmPlayer from './BgmPlayer'
 import PixelPetCanvas from './PixelPetCanvas'
 import type { Species } from '../lib/pixelpet'
 
@@ -33,7 +28,6 @@ interface VisitData {
 }
 
 export default function Room() {
-  const { playerId, logout } = usePlayerId()
   const pet = usePetStore((s) => s.pet)
   const levelUpPending = usePetStore((s) => s.levelUpPending)
   const clearLevelUpPending = usePetStore((s) => s.clearLevelUpPending)
@@ -96,7 +90,7 @@ export default function Room() {
   if (visitingRoom) {
     return (
       <div
-        className="relative w-full h-screen overflow-hidden"
+        className="relative w-full h-full overflow-hidden"
         style={{ background: 'linear-gradient(180deg, #87ceeb 0%, #87ceeb 55%, #8bc34a 55%, #6aa84f 100%)' }}
       >
         {/* 訪問バナー */}
@@ -138,29 +132,17 @@ export default function Room() {
 
   return (
     <div
-      className="relative w-full h-screen overflow-hidden"
+      className="relative w-full h-full overflow-hidden"
       style={{ background: 'linear-gradient(180deg, #87ceeb 0%, #87ceeb 55%, #8bc34a 55%, #6aa84f 100%)' }}
     >
-      {/* 右上: 所持金・スキル・食事 */}
-      <div className="absolute top-4 right-4 z-10 flex flex-col items-end gap-2">
-        <div className="flex gap-2 items-center">
-          <MoneyDisplay />
-          <AccountMenu playerId={playerId} onLogout={logout} />
-        </div>
-        <div className="flex gap-2">
-          <FoodMenu />
-          <SkillPanel onUseSkill={setActiveSkill} />
-        </div>
-      </div>
-
-      {/* 左上: テレポート・BGM */}
-      <div className="absolute top-4 left-4 z-10 flex gap-2">
-        <Teleport />
-        <BgmPlayer />
+      {/* 右上: スキル・食事 */}
+      <div className="absolute top-3 right-3 z-10 flex gap-2">
+        <FoodMenu />
+        <SkillPanel onUseSkill={setActiveSkill} />
       </div>
 
       {/* ペット（中央上寄り） */}
-      <div className="absolute left-1/2 top-[28%] -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2">
         <Pet pet={pet} />
       </div>
 
@@ -186,21 +168,17 @@ export default function Room() {
       <AnimatePresence>
         {newAch && (
           <motion.div
-            className="absolute top-20 left-1/2 -translate-x-1/2 bg-yellow-400 text-yellow-900 font-bold px-6 py-3 rounded-2xl shadow-xl z-50 flex items-center gap-2"
-            initial={{ y: -40, opacity: 0 }}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-50 mg-toast flex items-center gap-2"
+            style={{ background: 'var(--accent-3)', whiteSpace: 'nowrap' }}
+            initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -40, opacity: 0 }}
+            exit={{ y: -20, opacity: 0 }}
             onAnimationComplete={() => setTimeout(clearNewUnlock, 2500)}
           >
             {newAch.emoji} 実績解放: {newAch.name}
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ヒント */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-white/60 text-sm select-none whitespace-nowrap">
-        アイテムをクリックして回収 → 「全部売る」でお金に変換
-      </div>
     </div>
   )
 }

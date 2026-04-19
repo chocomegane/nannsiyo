@@ -13,7 +13,7 @@ export default function FurnitureShop() {
   const ownedIds = items.map((i) => i.furnitureId)
 
   return (
-    <div className="relative w-full h-screen overflow-hidden flex flex-col"
+    <div className="relative w-full h-full overflow-hidden flex flex-col"
       style={{ background: 'linear-gradient(180deg, #ffecd2 0%, #fcb69f 100%)' }}>
 
       <div className="absolute top-4 right-4 z-10"><Teleport /></div>

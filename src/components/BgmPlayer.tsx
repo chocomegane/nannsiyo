@@ -8,7 +8,7 @@ const SCENE_LABELS: Partial<Record<Scene, string>> = {
 }
 const SCENES: Scene[] = ['room', 'furniture', 'park', 'dungeon', 'lottery', 'ranking']
 
-export default function BgmPlayer() {
+export default function BgmPlayer({ compact }: { compact?: boolean }) {
   const scene = useWorldStore((s) => s.scene)
   const [muted, setMuted] = useState(false)
   const [volume, setVolume] = useState(3)
@@ -40,7 +40,9 @@ export default function BgmPlayer() {
       <button
         onClick={() => setOpen((o) => !o)}
         title="BGM設定"
-        className="bg-white/80 hover:bg-white rounded-full w-9 h-9 flex items-center justify-center shadow text-lg transition-colors"
+        className={compact
+          ? 'mg-chip'
+          : 'bg-white/80 hover:bg-white rounded-full w-9 h-9 flex items-center justify-center shadow text-lg transition-colors'}
       >
         {muted ? '🔇' : '🎵'}
       </button>

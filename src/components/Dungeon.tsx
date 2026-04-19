@@ -61,7 +61,7 @@ export default function Dungeon() {
 
   return (
     <div
-      className="relative w-full h-screen overflow-hidden flex flex-col"
+      className="relative w-full h-full overflow-hidden flex flex-col"
       style={{ background: hitFlash ? 'rgba(255,0,0,0.3)' : 'linear-gradient(180deg, #0d0d1a 0%, #1a1a2e 50%, #0d0d0d 100%)', transition: 'background 0.15s' }}
     >
       {defeated && (
