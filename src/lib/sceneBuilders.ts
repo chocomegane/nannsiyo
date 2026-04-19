@@ -645,19 +645,6 @@ export function buildPark(root: Root, game: GameState) {
 }
 
 // ── DUNGEON ────────────────────────────────────────────────────────────────
-const ENEMIES = [
-  { name:'スライムJr.',  emoji:'🟢', lv:1,  hp:40,  atk:4,  reward:80  },
-  { name:'コウモリ',      emoji:'🦇', lv:3,  hp:60,  atk:6,  reward:120 },
-  { name:'ゴブリン',      emoji:'👺', lv:5,  hp:90,  atk:9,  reward:180 },
-  { name:'オーク',        emoji:'👹', lv:8,  hp:130, atk:13, reward:260 },
-  { name:'スケルトン',    emoji:'💀', lv:12, hp:180, atk:17, reward:360 },
-  { name:'ダークウィザード',emoji:'🧙', lv:16, hp:240, atk:22, reward:480 },
-  { name:'ドラゴンゾンビ',emoji:'🐲', lv:22, hp:320, atk:28, reward:650 },
-  { name:'闇の騎士',      emoji:'⚔️', lv:30, hp:420, atk:35, reward:900 },
-  { name:'リッチ王',      emoji:'☠️', lv:40, hp:560, atk:44, reward:1200 },
-  { name:'魔王',          emoji:'😈', lv:50, hp:800, atk:60, reward:2000 },
-]
-
 export function buildDungeon(root: Root, game: GameState, showScene: (k: string) => void) {
   root.style.background = 'radial-gradient(circle at center, #3a3248 0%, #1d2026 100%)'
 
