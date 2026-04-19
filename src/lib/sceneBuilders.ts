@@ -297,7 +297,7 @@ export function buildPark(root: Root, game: GameState) {
   // ── ペット描画ヘルパー ──
   const PET_SIZE = 80
   type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
-  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; chatTimer?: ReturnType<typeof setTimeout> }>()
+  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; chatTimer?: ReturnType<typeof setTimeout>; phase: number }>()
 
   function stageFromLevel(lv: number) { return lv >= 50 ? 3 : lv >= 20 ? 2 : 1 }
 
@@ -345,11 +345,16 @@ export function buildPark(root: Root, game: GameState) {
 
   // ── 自分のペット（game.petはgetterなので毎回最新値を取得）──
   const currentPet = game.pet
-  const youData: PeerData & { dx: number; facing: number } = {
+  // 速度・位相をランダムにしてほかのプレイヤーと動きが被らないようにする
+  const youPhase = Math.random() * Math.PI * 2
+  const youSpeed = 0.5 + Math.random() * 0.8  // 0.5〜1.3 px/frame
+  const youStartX = 200 + Math.random() * 680  // 初期位置もランダム
+  const youData: PeerData & { dx: number; facing: number; phase: number } = {
     id: game.playerId, name: currentPet.name, species: currentPet.species, level: currentPet.lv,
-    x: 540, y: 420,
-    dx: 0.8,    // 自動歩行速度（正=右）
-    facing: 1,  // 1=右向き -1=左向き
+    x: youStartX, y: 420,
+    dx: youSpeed,
+    facing: 1,
+    phase: youPhase,
   }
   const youWrapper = makePetWrapper(youData, true)
   petLayer.appendChild(youWrapper)
@@ -372,7 +377,7 @@ export function buildPark(root: Root, game: GameState) {
       if (p.id === game.playerId) return
       const w = makePetWrapper(p, false)
       petLayer.appendChild(w)
-      peers.set(p.id, { data: p, wrapper: w })
+      peers.set(p.id, { data: p, wrapper: w, phase: Math.random() * Math.PI * 2 })
     })
     updateCount()
   })
@@ -381,7 +386,7 @@ export function buildPark(root: Root, game: GameState) {
     if (p.id === game.playerId || peers.has(p.id)) return
     const w = makePetWrapper(p, false)
     petLayer.appendChild(w)
-    peers.set(p.id, { data: p, wrapper: w })
+    peers.set(p.id, { data: p, wrapper: w, phase: Math.random() * Math.PI * 2 })
     updateCount()
   })
 
@@ -425,18 +430,17 @@ export function buildPark(root: Root, game: GameState) {
 
   function tick() {
     const now = performance.now()
-    const bob = Math.abs(Math.sin(now / 300)) * 4  // 歩行ボブ（上下）
 
-    // 自分を自動歩行
+    // 自分を自動歩行（固有の位相で上下ボブ）
     youData.x += youData.dx
     if (youData.x >= 980) { youData.dx = -Math.abs(youData.dx); youData.facing = -1 }
     if (youData.x <= 80)  { youData.dx =  Math.abs(youData.dx); youData.facing =  1 }
     setFacing(youWrapper, youData.facing)
-    setPetPos(youWrapper, youData.x, youData.y, bob)
+    setPetPos(youWrapper, youData.x, youData.y, Math.abs(Math.sin((now + youData.phase * 300) / 300)) * 4)
 
-    // 他プレイヤー（受信座標をそのまま表示、向き判定なし）
+    // 他プレイヤー（固有の位相でボブをずらす）
     peers.forEach(peer => {
-      setPetPos(peer.wrapper, peer.data.x, peer.data.y, Math.abs(Math.sin(now / 300 + peer.data.x * 0.01)) * 4)
+      setPetPos(peer.wrapper, peer.data.x, peer.data.y, Math.abs(Math.sin((now + peer.phase * 300) / 300)) * 4)
     })
 
     // move を 100ms ごとに送信
@@ -448,14 +452,6 @@ export function buildPark(root: Root, game: GameState) {
     rafId = requestAnimationFrame(tick)
   }
   rafId = requestAnimationFrame(tick)
-
-  // ── 矢印キーで方向上書き ──
-  const keyHandler = (e: KeyboardEvent) => {
-    if (document.activeElement && document.activeElement.tagName === 'INPUT') return
-    if (e.key === 'ArrowLeft')  { youData.dx = -Math.abs(youData.dx); youData.facing = -1; e.preventDefault() }
-    if (e.key === 'ArrowRight') { youData.dx =  Math.abs(youData.dx); youData.facing =  1; e.preventDefault() }
-  }
-  window.addEventListener('keydown', keyHandler)
 
   // ── チャットドック ──
   const chatDock = el('div')
@@ -490,7 +486,6 @@ export function buildPark(root: Root, game: GameState) {
   ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
     socket.disconnect()
     cancelAnimationFrame(rafId)
-    window.removeEventListener('keydown', keyHandler)
   }
 }
 
