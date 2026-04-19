@@ -439,9 +439,11 @@ export function buildPark(root: Root, game: GameState) {
   }
   window.addEventListener('keydown', keyHandler)
 
-  // シーン表示時にフォーカスを当ててキー入力を即受け取れるようにする
+  // シーンクリック時・表示直後にフォーカスを設定してキー入力を受け取る
   root.setAttribute('tabindex', '-1')
-  root.focus()
+  root.style.outline = 'none'
+  setTimeout(() => root.focus(), 100)
+  root.addEventListener('click', () => root.focus())
 
   // ── チャットドック ──
   const chatDock = el('div')

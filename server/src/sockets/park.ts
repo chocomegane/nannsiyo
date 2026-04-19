@@ -17,8 +17,8 @@ export function registerParkHandlers(io: Server) {
 
   ns.on('connection', (socket) => {
     socket.on('join', (data: { id: string; name: string; species: string; level: number; scene?: string }) => {
-      const x = 15 + Math.random() * 70
-      const y = 55 + Math.random() * 25
+      const x = 150 + Math.random() * 780
+      const y = 420
       const scene = data.scene ?? 'park'
       const player: ParkPlayer = { ...data, x, y, scene }
       parkPlayers.set(socket.id, player)
