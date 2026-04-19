@@ -462,7 +462,7 @@ export function buildPark(root: Root, game: GameState) {
     return Math.abs(Math.sin((now + w.phase * 300) / 280)) * 5
   }
 
-  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; chatTimer?: ReturnType<typeof setTimeout>; wander: WanderState }>()
+  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; wander: WanderState }>()
 
   function stageFromLevel(lv: number) { return lv >= 50 ? 3 : lv >= 20 ? 2 : 1 }
 
@@ -491,16 +491,19 @@ export function buildPark(root: Root, game: GameState) {
     return w
   }
 
-  function showChatBubble(wrapper: HTMLElement, message: string, chatTimer?: ReturnType<typeof setTimeout>) {
-    if (chatTimer) clearTimeout(chatTimer)
-    let bub = wrapper.querySelector<HTMLElement>('.chat-bub')
-    if (!bub) {
-      bub = el('div','chat-bub')
-      bub.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); background:#fff; border:2px solid var(--ink); border-radius:10px; padding:5px 10px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap; z-index:10; pointer-events:none;`
-      wrapper.insertBefore(bub, wrapper.firstChild)
+  function showChatBubble(wrapper: HTMLElement, message: string) {
+    let container = wrapper.querySelector<HTMLElement>('.chat-container')
+    if (!container) {
+      container = el('div', 'chat-container')
+      container.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:3px; pointer-events:none; z-index:10;`
+      wrapper.insertBefore(container, wrapper.firstChild)
     }
+    while (container.children.length >= 3) container.firstElementChild!.remove()
+    const bub = el('div', 'chat-bub')
+    bub.style.cssText = `background:#fff; border:2px solid var(--ink); border-radius:10px; padding:5px 10px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap;`
     bub.textContent = message
-    return setTimeout(() => bub?.remove(), 5000)
+    container.appendChild(bub)
+    setTimeout(() => { bub.remove(); if (container && container.children.length === 0) container.remove() }, 5000)
   }
 
   function setPetPos(wrapper: HTMLElement, x: number, y: number, bobOffset: number) {
@@ -563,15 +566,9 @@ export function buildPark(root: Root, game: GameState) {
   })
 
   socket.on('park:chat', ({ id, message }: { id: string; message: string }) => {
-    if (id === socket.id) {
-      const timer = showChatBubble(youWrapper, message)
-      void timer
-      return
-    }
+    if (id === socket.id) { showChatBubble(youWrapper, message); return }
     const peer = Array.from(peers.values()).find(p => p.data.id === id)
-    if (peer) {
-      peer.chatTimer = showChatBubble(peer.wrapper, message, peer.chatTimer)
-    }
+    if (peer) showChatBubble(peer.wrapper, message)
   })
 
   // ペットのcanvasに向き反転を適用するヘルパー
@@ -1355,7 +1352,7 @@ export function buildRadio(root: Root, game: GameState) {
     return Math.abs(Math.sin((now+w.phase*300)/280))*5
   }
 
-  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; chatTimer?: ReturnType<typeof setTimeout>; wander: WanderState }>()
+  const peers = new Map<string, { data: PeerData; wrapper: HTMLElement; wander: WanderState }>()
   function stageFromLevel(lv: number) { return lv>=50?3:lv>=20?2:1 }
 
   function makePetWrapper(data: PeerData, isYou: boolean): HTMLElement {
@@ -1377,16 +1374,19 @@ export function buildRadio(root: Root, game: GameState) {
     return w
   }
 
-  function showChatBubble(wrapper: HTMLElement, message: string, chatTimer?: ReturnType<typeof setTimeout>) {
-    if (chatTimer) clearTimeout(chatTimer)
-    let bub = wrapper.querySelector<HTMLElement>('.chat-bub')
-    if (!bub) {
-      bub = el('div','chat-bub')
-      bub.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); background:#fff; border:2px solid var(--ink); border-radius:10px; padding:5px 10px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap; z-index:10; pointer-events:none;`
-      wrapper.insertBefore(bub, wrapper.firstChild)
+  function showChatBubble(wrapper: HTMLElement, message: string) {
+    let container = wrapper.querySelector<HTMLElement>('.chat-container')
+    if (!container) {
+      container = el('div', 'chat-container')
+      container.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); display:flex; flex-direction:column; align-items:center; gap:3px; pointer-events:none; z-index:10;`
+      wrapper.insertBefore(container, wrapper.firstChild)
     }
+    while (container.children.length >= 3) container.firstElementChild!.remove()
+    const bub = el('div', 'chat-bub')
+    bub.style.cssText = `background:#fff; border:2px solid var(--ink); border-radius:10px; padding:5px 10px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap;`
     bub.textContent = message
-    return setTimeout(() => bub?.remove(), 5000)
+    container.appendChild(bub)
+    setTimeout(() => { bub.remove(); if (container && container.children.length === 0) container.remove() }, 5000)
   }
 
   function setPetPos(wrapper: HTMLElement, x: number, y: number, bob: number) {
@@ -1480,7 +1480,7 @@ export function buildRadio(root: Root, game: GameState) {
   socket.on('radio:chat', ({ id, message }: { id: string; message: string }) => {
     if (id === socket.id) { showChatBubble(youWrapper, message); return }
     const peer = Array.from(peers.values()).find(p => p.data.id === id)
-    if (peer) peer.chatTimer = showChatBubble(peer.wrapper, message, peer.chatTimer)
+    if (peer) showChatBubble(peer.wrapper, message)
   })
 
   function setFacing(wrapper: HTMLElement, dir: number) {
