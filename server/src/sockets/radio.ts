@@ -22,7 +22,7 @@ export function registerRadioHandlers(io: Server) {
       const player: RadioPlayer = { ...data, x, y }
       radioPlayers.set(socket.id, player)
 
-      const others = Array.from(radioPlayers.values()).filter((_, k) => k !== socket.id)
+      const others = Array.from(radioPlayers.values()).filter((p) => p.id !== data.id)
       socket.emit('players', others)
       socket.emit('station', { index: currentStation })
 
