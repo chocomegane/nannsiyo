@@ -1,6 +1,5 @@
 import { usePetStore } from '../store/petStore'
 import { usePlayerStore } from '../store/playerStore'
-import { useWorldStore } from '../store/worldStore'
 
 export interface GameState {
   coin: number

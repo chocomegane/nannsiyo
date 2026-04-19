@@ -1,4 +1,4 @@
-import { createPetCanvas, levelToStage } from './pixelpet'
+import { createPetCanvas } from './pixelpet'
 import type { Species } from '../types'
 import type { GameState } from './sceneGame'
 
@@ -11,12 +11,6 @@ function el(tag: string, cls?: string, html?: string): HTMLElement {
   return e
 }
 
-function petDisplay(species: string, stage: number, size = 160): HTMLElement {
-  const wrap = el('div')
-  wrap.style.cssText = `position:relative; width:${size}px; height:${size}px;`
-  wrap.appendChild(createPetCanvas(species as Species, stage, size))
-  return wrap
-}
 
 function showStatusBubble(parent: HTMLElement, x: number, y: number, game: GameState): HTMLElement {
   const p = game.pet
@@ -35,7 +29,7 @@ function showStatusBubble(parent: HTMLElement, x: number, y: number, game: GameS
 }
 
 // ── ROOM ──────────────────────────────────────────────────────────────────
-export function buildRoom(root: Root, game: GameState, showScene: (k: string) => void) {
+export function buildRoom(root: Root, game: GameState, _showScene: (k: string) => void) {
   const time = game.time
   const skyBase  = { day:'#f4e9cf', dusk:'#f0c8a0', night:'#4a4870' }[time]
   const floorA   = { day:'#d8c39c', dusk:'#c8a27a', night:'#6b6080' }[time]
