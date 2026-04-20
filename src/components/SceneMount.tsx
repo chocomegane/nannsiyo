@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { buildGameState } from '../lib/sceneGame'
-import { buildRoom, buildPark, buildDungeon, buildLottery, buildRanking, buildFurniture, buildFriendRoom, buildRadio } from '../lib/sceneBuilders'
+import { buildRoom, buildPark, buildDungeon, buildRanking, buildFurniture, buildFriendRoom, buildRadio } from '../lib/sceneBuilders'
 import { useWorldStore } from '../store/worldStore'
 import { usePlayerId } from '../lib/playerContext'
 import type { Scene } from '../types'
@@ -9,7 +9,6 @@ const BUILDERS = {
   room: buildRoom,
   park: buildPark,
   dungeon: buildDungeon,
-  lottery: buildLottery,
   ranking: buildRanking,
   furniture: buildFurniture,
   friend: buildFriendRoom,

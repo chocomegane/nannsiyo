@@ -10,7 +10,6 @@ const NAV: { scene: Scene; ic: string; label: string }[] = [
   { scene: 'room',      ic: '🏠', label: 'じぶんの部屋' },
   { scene: 'park',      ic: '🌳', label: 'ひかりの公園' },
   { scene: 'dungeon',   ic: '⚔️', label: 'ダンジョン' },
-  { scene: 'lottery',   ic: '🎰', label: '宝くじ店' },
   { scene: 'ranking',   ic: '🏆', label: 'ランキング' },
   { scene: 'furniture', ic: '🛋️', label: 'インテリア' },
   { scene: 'radio',     ic: '📻', label: 'ラジオルーム' },
