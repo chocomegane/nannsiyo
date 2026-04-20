@@ -19,12 +19,12 @@ function el(tag: string, cls?: string, html?: string): HTMLElement {
 
 
 // ── 掲示板モーダル ────────────────────────────────────────────────────────────
-function openBoard(root: Root, scene: string, game: GameState) {
-  if (root.querySelector('#boardModal')) return
+export function openBoard(scene: string, playerId: string) {
+  if (document.getElementById('boardModal')) return
 
   const overlay = el('div','')
   overlay.id = 'boardModal'
-  overlay.style.cssText = 'position:absolute;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;'
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:2000;display:flex;align-items:center;justify-content:center;'
 
   const panel = el('div','panel')
   panel.style.cssText = 'width:480px;max-width:92vw;max-height:80vh;display:flex;flex-direction:column;gap:10px;padding:20px;background:var(--paper);border:2px solid var(--ink);border-radius:16px;box-shadow:6px 6px 0 var(--ink);'
@@ -41,7 +41,7 @@ function openBoard(root: Root, scene: string, game: GameState) {
     </div>
   `
   overlay.appendChild(panel)
-  root.appendChild(overlay)
+  document.body.appendChild(overlay)
 
   const postsEl = panel.querySelector<HTMLElement>('#boardPosts')!
   const input   = panel.querySelector<HTMLInputElement>('#boardInput')!
@@ -69,7 +69,7 @@ function openBoard(root: Root, scene: string, game: GameState) {
     const msg = input.value.trim()
     if (!msg) return
     input.value = ''
-    await postBoard(scene, game.playerId, msg)
+    await postBoard(scene, playerId, msg)
     fetchBoard(scene).then(renderPosts)
   }
 
@@ -79,12 +79,22 @@ function openBoard(root: Root, scene: string, game: GameState) {
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove() })
 }
 
-function addBoardButton(root: Root, scene: string, game: GameState) {
-  const btn = el('button','btn')
-  btn.textContent = '📋 掲示板'
-  btn.style.cssText = 'position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:10;'
-  btn.addEventListener('click', () => openBoard(root, scene, game))
-  root.appendChild(btn)
+// 公園・ラジオ用: ワールドオブジェクトとして掲示板を配置
+function addBoardObject(root: Root, scene: string, playerId: string) {
+  const obj = el('div')
+  obj.style.cssText = 'position:absolute;left:820px;bottom:128px;z-index:6;cursor:pointer;text-align:center;transition:transform 0.15s;user-select:none;'
+  obj.innerHTML = `
+    <div style="display:inline-block;">
+      <div style="background:#d4a24c;border:3px solid #8a5a3a;border-radius:6px;padding:6px 10px;box-shadow:3px 3px 0 #5a3a1a;font-size:11px;font-weight:700;color:#2a2420;line-height:1.4;min-width:52px;">
+        📋<br><span style="font-size:10px;">掲示板</span>
+      </div>
+      <div style="width:6px;height:28px;background:#8a5a3a;margin:0 auto;border-left:1px solid #5a3a1a;"></div>
+    </div>
+  `
+  obj.addEventListener('click', () => openBoard(scene, playerId))
+  obj.addEventListener('mouseenter', () => { obj.style.transform = 'scale(1.08)' })
+  obj.addEventListener('mouseleave', () => { obj.style.transform = '' })
+  root.appendChild(obj)
 }
 
 function showStatusBubble(parent: HTMLElement, x: number, y: number, game: GameState): HTMLElement {
@@ -365,7 +375,6 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     document.head.appendChild(st)
   }
 
-  addBoardButton(root, 'room', game)
 }
 
 // ── PARK ──────────────────────────────────────────────────────────────────
@@ -635,7 +644,7 @@ export function buildPark(root: Root, game: GameState) {
   })
   chatSend.addEventListener('click', sendChat)
 
-  addBoardButton(root, 'park', game)
+  addBoardObject(root, 'park', game.playerId)
 
   // ── クリーンアップ ──
   ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
@@ -924,7 +933,6 @@ export function buildDungeon(root: Root, game: GameState, showScene: (k: string)
     overlay.querySelector('#goRoomBtn')!.addEventListener('click', () => showScene('room'))
   })
 
-  addBoardButton(root, 'dungeon', game)
 
   ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
     socket.disconnect()
@@ -1080,7 +1088,6 @@ export function buildLottery(root: Root, game: GameState) {
     })
   })
 
-  addBoardButton(root, 'lottery', game)
 }
 
 // ── RANKING ────────────────────────────────────────────────────────────────
@@ -1175,7 +1182,6 @@ export function buildRanking(root: Root, game: GameState) {
     }
   })
 
-  addBoardButton(root, 'ranking', game)
 }
 
 // ── FURNITURE ──────────────────────────────────────────────────────────────
@@ -1231,7 +1237,6 @@ export function buildFurniture(root: Root, game: GameState) {
     })
   }
   renderGrid()
-  addBoardButton(root, 'furniture', game)
 }
 
 // ── FRIEND ROOM ────────────────────────────────────────────────────────────
@@ -1597,7 +1602,7 @@ export function buildRadio(root: Root, game: GameState) {
   chatInput.addEventListener('keydown', e => { e.stopPropagation(); if (e.key==='Enter') sendChat() })
   chatDock.querySelector('#chatSend')!.addEventListener('click', sendChat)
 
-  addBoardButton(root, 'radio', game)
+  addBoardObject(root, 'radio', game.playerId)
 
   ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
     socket.disconnect()

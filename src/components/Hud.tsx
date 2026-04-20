@@ -1,5 +1,7 @@
 import { useWorldStore } from '../store/worldStore'
 import { usePlayerStore } from '../store/playerStore'
+import { usePlayerId } from '../lib/playerContext'
+import { openBoard } from '../lib/sceneBuilders'
 import BgmPlayer from './BgmPlayer'
 
 const TITLES: Record<string, string> = {
@@ -11,9 +13,12 @@ const TITLES: Record<string, string> = {
   furniture: '🛋️ インテリアショップ',
 }
 
+const WALK_SCENES = new Set(['park', 'radio'])
+
 export default function Hud() {
   const scene = useWorldStore((s) => s.scene)
   const { money, inventory, sellAll } = usePlayerStore()
+  const { playerId } = usePlayerId()
   const sellTotal = inventory.reduce((s, i) => s + i.sellPrice, 0)
 
   return (
@@ -21,6 +26,11 @@ export default function Hud() {
       <span className="title">{TITLES[scene] ?? ''}</span>
       <span className="spacer" />
       <BgmPlayer compact />
+      {!WALK_SCENES.has(scene) && (
+        <button className="mg-chip" onClick={() => openBoard(scene, playerId)} title="掲示板">
+          📋
+        </button>
+      )}
       {inventory.length > 0 && (
         <button className="mg-chip accent" onClick={sellAll}>
           全部売る
