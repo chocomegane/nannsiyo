@@ -8,7 +8,6 @@ const DESTINATIONS: { scene: Scene; label: string; emoji: string }[] = [
   { scene: 'furniture', label: 'インテリアショップ', emoji: '🛋️' },
   { scene: 'park',      label: '公園',             emoji: '🌳' },
   { scene: 'dungeon',   label: 'ダンジョン',       emoji: '⚔️' },
-  { scene: 'lottery',   label: '宝くじ店',         emoji: '🎰' },
   { scene: 'ranking',   label: 'ランキング',       emoji: '🏆' },
 ]
 
