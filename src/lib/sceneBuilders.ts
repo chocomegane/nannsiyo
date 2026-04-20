@@ -1146,11 +1146,14 @@ export function buildFriendRoom(root: Root, game: GameState, showScene: (k: stri
 
 // ── RADIO ROOM ─────────────────────────────────────────────────────────────
 const RADIO_STATIONS = [
-  { name: 'NHK ラジオ第1',       emoji: '📡', url: 'https://nhkradioakr1-i.akamaihd.net/hls/live/511929/1-r1/1-r1-01.m3u8' },
-  { name: 'NHK FM',              emoji: '🎵', url: 'https://nhkradioakfm-i.akamaihd.net/hls/live/512099/1-fm/1-fm-01.m3u8' },
-  { name: 'J-WAVE 81.3',         emoji: '🌸', url: 'https://mtist.as.smartstream.ne.jp/30012/livestream/playlist.m3u8' },
-  { name: 'interfm 89.7',        emoji: '🎷', url: 'https://mtist.as.smartstream.ne.jp/30014/livestream/playlist.m3u8' },
-  { name: 'Shibuya FM 78.4',     emoji: '🎶', url: 'https://mtist.as.smartstream.ne.jp/30026/livestream/playlist.m3u8' },
+  { name: 'NHK ラジオ第1（東京）', emoji: '📡', url: 'https://radio-stream.nhk.jp/hls/live/2023229/nhkradiruakr1/master48k.m3u8' },
+  { name: 'NHK FM（東京）',        emoji: '🎵', url: 'https://radio-stream.nhk.jp/hls/live/2023507/nhkradiruakfm/master48k.m3u8' },
+  { name: 'NHK ラジオ第1（大阪）', emoji: '📡', url: 'https://radio-stream.nhk.jp/hls/live/2023508/nhkradirubkr1/master48k.m3u8' },
+  { name: 'NHK FM（大阪）',        emoji: '🎵', url: 'https://radio-stream.nhk.jp/hls/live/2023509/nhkradirubkfm/master48k.m3u8' },
+  { name: 'NHK ラジオ第1（名古屋）',emoji: '📡', url: 'https://radio-stream.nhk.jp/hls/live/2023510/nhkradiruckr1/master48k.m3u8' },
+  { name: 'NHK FM（名古屋）',      emoji: '🎵', url: 'https://radio-stream.nhk.jp/hls/live/2023511/nhkradiruckfm/master48k.m3u8' },
+  { name: 'NHK ラジオ第1（札幌）', emoji: '📡', url: 'https://radio-stream.nhk.jp/hls/live/2023545/nhkradiruikr1/master.m3u8' },
+  { name: 'NHK FM（札幌）',        emoji: '🎵', url: 'https://radio-stream.nhk.jp/hls/live/2023546/nhkradiruikfm/master.m3u8' },
 ]
 
 export function buildRadio(root: Root, game: GameState) {
