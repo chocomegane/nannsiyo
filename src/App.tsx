@@ -25,7 +25,11 @@ export default function App() {
   const [loggedIn, setLoggedIn] = useState(false)
   const [initializing, setInitializing] = useState(true)
 
-  useEffect(() => { if (loggedIn) bgm.play(scene) }, [scene, loggedIn])
+  useEffect(() => {
+    if (!loggedIn) return
+    if (scene === 'radio') { bgm.stop(); return }
+    bgm.play(scene)
+  }, [scene, loggedIn])
 
   useEffect(() => {
     async function init() {
