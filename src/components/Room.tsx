@@ -16,6 +16,7 @@ import SkillPanel from './SkillPanel'
 import LevelUpEffect from './LevelUpEffect'
 import SkillEffect from './SkillEffect'
 import RoomDecorations from './RoomDecorations'
+import FurniturePanel from './FurniturePanel'
 import PetOverlay from './PetOverlay'
 import PixelPetCanvas from './PixelPetCanvas'
 import type { Species } from '../lib/pixelpet'
@@ -154,6 +155,9 @@ export default function Room() {
       </AnimatePresence>
 
       <RoomDecorations />
+
+      {/* 家具配置パネル */}
+      <FurniturePanel />
 
       {/* インベントリパネル */}
       <InventoryPanel />
