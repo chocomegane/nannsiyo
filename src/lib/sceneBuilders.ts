@@ -803,37 +803,33 @@ export function buildPark(root: Root, game: GameState) {
     if (canvas) canvas.style.transform = dir < 0 ? 'scaleX(-1)' : 'scaleX(1)'
   }
 
-  // ── 公園の床エサシステム ──
-  type ParkFloorFood = { foodItemId: string; emoji: string; x: number; y: number; el: HTMLElement; cleanup: () => void }
+  // ── 公園の床エサシステム（パーセント座標でrootに配置）──
+  type ParkFloorFood = { foodItemId: string; emoji: string; xPct: number; yPct: number; el: HTMLElement; cleanup: () => void }
   const floorFoods: ParkFloorFood[] = []
 
   function placeParkFood(foodItemId: string, emoji: string) {
-    const x = X_MIN + Math.random() * (X_MAX - X_MIN)
-    const y = Y_MIN + Math.random() * (Y_MAX - Y_MIN)
+    const xPct = 5 + Math.random() * 90
+    const yPct = 5 + Math.random() * 85
     const foodEl = el('div')
-    foodEl.style.cssText = `position:absolute; left:${x-18}px; top:${y-18}px; font-size:30px; cursor:grab; user-select:none; pointer-events:auto; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.3)); z-index:5;`
+    foodEl.style.cssText = `position:absolute; font-size:30px; cursor:grab; user-select:none; pointer-events:auto; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.3)); z-index:15; transform:translate(-50%,-50%);`
     foodEl.textContent = emoji
-    const entry: ParkFloorFood = { foodItemId, emoji, x, y, el: foodEl, cleanup: () => {} }
-    let dragging = false, dragOffX = 0, dragOffY = 0
+    const entry: ParkFloorFood = { foodItemId, emoji, xPct, yPct, el: foodEl, cleanup: () => {} }
+    function applyPos() { foodEl.style.left = entry.xPct + '%'; foodEl.style.top = entry.yPct + '%' }
+    applyPos()
+    let dragging = false
     const onMove = (e: MouseEvent) => {
       if (!dragging) return
-      const rect = petLayer.getBoundingClientRect()
-      entry.x = Math.max(X_MIN, Math.min(X_MAX, (e.clientX - rect.left) - dragOffX))
-      entry.y = Math.max(Y_MIN, Math.min(Y_MAX, (e.clientY - rect.top) - dragOffY))
-      foodEl.style.left = (entry.x - 18) + 'px'
-      foodEl.style.top  = (entry.y - 18) + 'px'
+      const rect = root.getBoundingClientRect()
+      entry.xPct = Math.max(2, Math.min(98, (e.clientX - rect.left) / rect.width * 100))
+      entry.yPct = Math.max(2, Math.min(92, (e.clientY - rect.top) / rect.height * 100))
+      applyPos()
     }
     const onUp = () => { if (dragging) { dragging = false; foodEl.style.cursor = 'grab' } }
-    foodEl.addEventListener('mousedown', (e) => {
-      dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault()
-      const rect = petLayer.getBoundingClientRect()
-      dragOffX = (e.clientX - rect.left) - entry.x
-      dragOffY = (e.clientY - rect.top) - entry.y
-    })
+    foodEl.addEventListener('mousedown', e => { dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault() })
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     entry.cleanup = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    petLayer.appendChild(foodEl)
+    root.appendChild(foodEl)
     floorFoods.push(entry)
   }
 
@@ -842,7 +838,7 @@ export function buildPark(root: Root, game: GameState) {
     if (idx === -1) return
     floorFoods.splice(idx, 1)
     entry.el.style.transition = 'transform 0.2s, opacity 0.2s'
-    entry.el.style.transform = 'scale(0)'
+    entry.el.style.transform = 'translate(-50%,-50%) scale(0)'
     entry.el.style.opacity = '0'
     setTimeout(() => entry.el.remove(), 220)
     entry.cleanup()
@@ -860,20 +856,27 @@ export function buildPark(root: Root, game: GameState) {
 
   function tick() {
     const now = performance.now()
+    // パーセント→ペットレイヤーピクセル変換（食べる距離判定用）
+    const lw = petLayer.offsetWidth || 1080
+    const lh = petLayer.offsetHeight || 508
+
+    function foodPx(f: ParkFloorFood) {
+      return { fx: f.xPct / 100 * lw, fy: f.yPct / 100 * lh }
+    }
 
     // 自分 — 空腹なら餌を追う
     const isYouHungry = game.pet.hun < 1.0
     let youBob = 0
     if (isYouHungry && floorFoods.length > 0) {
       const nearest = floorFoods.reduce((a, b) => {
-        const da = (a.x-youWander.x)**2+(a.y-youWander.y)**2
-        const db = (b.x-youWander.x)**2+(b.y-youWander.y)**2
-        return da < db ? a : b
+        const {fx:ax,fy:ay} = foodPx(a); const {fx:bx,fy:by} = foodPx(b)
+        return (ax-youWander.x)**2+(ay-youWander.y)**2 < (bx-youWander.x)**2+(by-youWander.y)**2 ? a : b
       })
-      const dx = nearest.x - youWander.x, dy = nearest.y - youWander.y
+      const {fx, fy} = foodPx(nearest)
+      const dx = fx - youWander.x, dy = fy - youWander.y
       const dist = Math.sqrt(dx*dx + dy*dy)
-      if (dist < 25) {
-        eatFood(nearest, youWander.x > 0 ? '' : '', true)
+      if (dist < 30) {
+        eatFood(nearest, '', true)
       } else {
         youWander.x += (dx/dist) * 1.5
         youWander.y += (dy/dist) * 0.75
@@ -891,13 +894,13 @@ export function buildPark(root: Root, game: GameState) {
       let bob = 0
       if (floorFoods.length > 0) {
         const nearest = floorFoods.reduce((a, b) => {
-          const da = (a.x-peer.wander.x)**2+(a.y-peer.wander.y)**2
-          const db = (b.x-peer.wander.x)**2+(b.y-peer.wander.y)**2
-          return da < db ? a : b
+          const {fx:ax,fy:ay} = foodPx(a); const {fx:bx,fy:by} = foodPx(b)
+          return (ax-peer.wander.x)**2+(ay-peer.wander.y)**2 < (bx-peer.wander.x)**2+(by-peer.wander.y)**2 ? a : b
         })
-        const dx = nearest.x - peer.wander.x, dy = nearest.y - peer.wander.y
+        const {fx, fy} = foodPx(nearest)
+        const dx = fx - peer.wander.x, dy = fy - peer.wander.y
         const dist = Math.sqrt(dx*dx + dy*dy)
-        if (dist < 25) {
+        if (dist < 30) {
           eatFood(nearest, peer.data.name, false)
         } else {
           peer.wander.x += (dx/dist) * 1.5
@@ -1673,37 +1676,33 @@ export function buildRadio(root: Root, game: GameState) {
     if (canvas) canvas.style.transform = dir<0?'scaleX(-1)':'scaleX(1)'
   }
 
-  // ── ラジオの床エサシステム ──
-  type RadioFloorFood = { foodItemId: string; emoji: string; x: number; y: number; el: HTMLElement; cleanup: () => void }
+  // ── ラジオの床エサシステム（パーセント座標でrootに配置）──
+  type RadioFloorFood = { foodItemId: string; emoji: string; xPct: number; yPct: number; el: HTMLElement; cleanup: () => void }
   const floorFoodsR: RadioFloorFood[] = []
 
   function placeRadioFood(foodItemId: string, emoji: string) {
-    const x = X_MIN + Math.random() * (X_MAX - X_MIN)
-    const y = Y_MIN + Math.random() * (Y_MAX - Y_MIN)
+    const xPct = 5 + Math.random() * 90
+    const yPct = 5 + Math.random() * 85
     const foodEl = el('div')
-    foodEl.style.cssText = `position:absolute; left:${x-18}px; top:${y-18}px; font-size:30px; cursor:grab; user-select:none; pointer-events:auto; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); z-index:5;`
+    foodEl.style.cssText = `position:absolute; font-size:30px; cursor:grab; user-select:none; pointer-events:auto; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); z-index:15; transform:translate(-50%,-50%);`
     foodEl.textContent = emoji
-    const entry: RadioFloorFood = { foodItemId, emoji, x, y, el: foodEl, cleanup: () => {} }
-    let dragging = false, dragOffX = 0, dragOffY = 0
+    const entry: RadioFloorFood = { foodItemId, emoji, xPct, yPct, el: foodEl, cleanup: () => {} }
+    function applyPos() { foodEl.style.left = entry.xPct + '%'; foodEl.style.top = entry.yPct + '%' }
+    applyPos()
+    let dragging = false
     const onMove = (e: MouseEvent) => {
       if (!dragging) return
-      const rect = petLayer.getBoundingClientRect()
-      entry.x = Math.max(X_MIN, Math.min(X_MAX, (e.clientX - rect.left) - dragOffX))
-      entry.y = Math.max(Y_MIN, Math.min(Y_MAX, (e.clientY - rect.top) - dragOffY))
-      foodEl.style.left = (entry.x - 18) + 'px'
-      foodEl.style.top  = (entry.y - 18) + 'px'
+      const rect = root.getBoundingClientRect()
+      entry.xPct = Math.max(2, Math.min(98, (e.clientX - rect.left) / rect.width * 100))
+      entry.yPct = Math.max(2, Math.min(92, (e.clientY - rect.top) / rect.height * 100))
+      applyPos()
     }
     const onUp = () => { if (dragging) { dragging = false; foodEl.style.cursor = 'grab' } }
-    foodEl.addEventListener('mousedown', (e) => {
-      dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault()
-      const rect = petLayer.getBoundingClientRect()
-      dragOffX = (e.clientX - rect.left) - entry.x
-      dragOffY = (e.clientY - rect.top) - entry.y
-    })
+    foodEl.addEventListener('mousedown', e => { dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault() })
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     entry.cleanup = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-    petLayer.appendChild(foodEl)
+    root.appendChild(foodEl)
     floorFoodsR.push(entry)
   }
 
@@ -1712,7 +1711,7 @@ export function buildRadio(root: Root, game: GameState) {
     if (idx === -1) return
     floorFoodsR.splice(idx, 1)
     entry.el.style.transition = 'transform 0.2s, opacity 0.2s'
-    entry.el.style.transform = 'scale(0)'
+    entry.el.style.transform = 'translate(-50%,-50%) scale(0)'
     entry.el.style.opacity = '0'
     setTimeout(() => entry.el.remove(), 220)
     entry.cleanup()
@@ -1727,18 +1726,24 @@ export function buildRadio(root: Root, game: GameState) {
   let rafId = 0, lastMoveEmit = 0
   function tick() {
     const now = performance.now()
+    const lw = petLayer.offsetWidth || 1080
+    const lh = petLayer.offsetHeight || 508
+
+    function foodPxR(f: RadioFloorFood) {
+      return { fx: f.xPct / 100 * lw, fy: f.yPct / 100 * lh }
+    }
 
     const isYouHungry = game.pet.hun < 1.0
     let youBob = 0
     if (isYouHungry && floorFoodsR.length > 0) {
       const nearest = floorFoodsR.reduce((a, b) => {
-        const da = (a.x-youWander.x)**2+(a.y-youWander.y)**2
-        const db = (b.x-youWander.x)**2+(b.y-youWander.y)**2
-        return da < db ? a : b
+        const {fx:ax,fy:ay} = foodPxR(a); const {fx:bx,fy:by} = foodPxR(b)
+        return (ax-youWander.x)**2+(ay-youWander.y)**2 < (bx-youWander.x)**2+(by-youWander.y)**2 ? a : b
       })
-      const dx = nearest.x - youWander.x, dy = nearest.y - youWander.y
+      const {fx, fy} = foodPxR(nearest)
+      const dx = fx - youWander.x, dy = fy - youWander.y
       const dist = Math.sqrt(dx*dx + dy*dy)
-      if (dist < 25) {
+      if (dist < 30) {
         eatRadioFood(nearest, '', true)
       } else {
         youWander.x += (dx/dist) * 1.5
@@ -1756,13 +1761,13 @@ export function buildRadio(root: Root, game: GameState) {
       let bob = 0
       if (floorFoodsR.length > 0) {
         const nearest = floorFoodsR.reduce((a, b) => {
-          const da = (a.x-peer.wander.x)**2+(a.y-peer.wander.y)**2
-          const db = (b.x-peer.wander.x)**2+(b.y-peer.wander.y)**2
-          return da < db ? a : b
+          const {fx:ax,fy:ay} = foodPxR(a); const {fx:bx,fy:by} = foodPxR(b)
+          return (ax-peer.wander.x)**2+(ay-peer.wander.y)**2 < (bx-peer.wander.x)**2+(by-peer.wander.y)**2 ? a : b
         })
-        const dx = nearest.x - peer.wander.x, dy = nearest.y - peer.wander.y
+        const {fx, fy} = foodPxR(nearest)
+        const dx = fx - peer.wander.x, dy = fy - peer.wander.y
         const dist = Math.sqrt(dx*dx + dy*dy)
-        if (dist < 25) {
+        if (dist < 30) {
           eatRadioFood(nearest, peer.data.name, false)
         } else {
           peer.wander.x += (dx/dist) * 1.5
