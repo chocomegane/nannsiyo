@@ -299,8 +299,33 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
   let petFacing = 1
   let roomRafId = 0
 
+  // ── ペットドラッグ（自室）──
+  let petDragging = false, petDragMoved = false
+  petWrap.style.cursor = 'grab'
+  petWrap.addEventListener('mousedown', (e) => {
+    petDragging = true; petDragMoved = false
+    petWrap.style.cursor = 'grabbing'
+    petIdleUntil = Infinity  // ドラッグ中はウロウロ停止
+    e.preventDefault()
+  })
+  window.addEventListener('mousemove', (e) => {
+    if (!petDragging) return
+    petDragMoved = true
+    const rect = room.getBoundingClientRect()
+    petX = Math.max(2, Math.min(97, (e.clientX - rect.left) / rect.width * 100))
+    petY = Math.max(8, Math.min(94, (e.clientY - rect.top) / rect.height * 100))
+  })
+  window.addEventListener('mouseup', () => {
+    if (!petDragging) return
+    petDragging = false
+    petWrap.style.cursor = 'grab'
+    petIdleUntil = performance.now() + 500  // 少し待ってから再開
+    petTargetX = petX; petTargetY = petY  // 現在地を目標にリセット
+  })
+
   let currentBubble: HTMLElement | null = null
   petWrap.addEventListener('click', () => {
+    if (petDragMoved) return  // ドラッグ後はクリック無視
     if (currentBubble) { currentBubble.remove(); currentBubble = null; return }
     const rect = petWrap.getBoundingClientRect()
     const parentRect = room.getBoundingClientRect()
@@ -746,6 +771,30 @@ export function buildPark(root: Root, game: GameState) {
   }
   const youWrapper = makePetWrapper(youData, true)
   petLayer.appendChild(youWrapper)
+
+  // ── ペットドラッグ（公園）──
+  let youDragging = false
+  const youCanvas = youWrapper.querySelector('canvas')
+  if (youCanvas) youCanvas.style.cursor = 'grab'
+  youWrapper.addEventListener('mousedown', (e) => {
+    youDragging = true
+    if (youCanvas) youCanvas.style.cursor = 'grabbing'
+    youWander.idleUntil = Infinity
+    e.preventDefault(); e.stopPropagation()
+  })
+  window.addEventListener('mousemove', (e) => {
+    if (!youDragging) return
+    const rect = petLayer.getBoundingClientRect()
+    youWander.x = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
+    youWander.y = Math.max(0, Math.min(rect.height, e.clientY - rect.top))
+  })
+  window.addEventListener('mouseup', () => {
+    if (!youDragging) return
+    youDragging = false
+    if (youCanvas) youCanvas.style.cursor = 'grab'
+    youWander.idleUntil = performance.now() + 500
+    youWander.targetX = youWander.x; youWander.targetY = youWander.y
+  })
 
   // ── Socket.io接続 ──
   const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
@@ -1588,6 +1637,30 @@ export function buildRadio(root: Root, game: GameState) {
   const youData: PeerData = { id:game.playerId, name:currentPet.name, species:currentPet.species, level:currentPet.lv, x:youWander.x, y:420 }
   const youWrapper = makePetWrapper(youData, true)
   petLayer.appendChild(youWrapper)
+
+  // ── ペットドラッグ（ラジオ）──
+  let youDraggingR = false
+  const youCanvasR = youWrapper.querySelector('canvas')
+  if (youCanvasR) youCanvasR.style.cursor = 'grab'
+  youWrapper.addEventListener('mousedown', (e) => {
+    youDraggingR = true
+    if (youCanvasR) youCanvasR.style.cursor = 'grabbing'
+    youWander.idleUntil = Infinity
+    e.preventDefault(); e.stopPropagation()
+  })
+  window.addEventListener('mousemove', (e) => {
+    if (!youDraggingR) return
+    const rect = petLayer.getBoundingClientRect()
+    youWander.x = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
+    youWander.y = Math.max(0, Math.min(rect.height, e.clientY - rect.top))
+  })
+  window.addEventListener('mouseup', () => {
+    if (!youDraggingR) return
+    youDraggingR = false
+    if (youCanvasR) youCanvasR.style.cursor = 'grab'
+    youWander.idleUntil = performance.now() + 500
+    youWander.targetX = youWander.x; youWander.targetY = youWander.y
+  })
 
   // ── Socket ──
   const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
