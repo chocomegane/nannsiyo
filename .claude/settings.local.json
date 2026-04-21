@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "WebSearch",
+      "WebFetch(domain:www.mediabaskets.net)",
+      "WebFetch(domain:channellists.tokyo)",
+      "WebFetch(domain:gist.github.com)"
     ]
   }
 }

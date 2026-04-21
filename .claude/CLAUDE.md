@@ -130,3 +130,7 @@ const DROP_TABLE = {
 - ダンジョン・公園（MMO要素）
 - テレポート・宝くじ店
 - Socket.io によるリアルタイム通信
+
+## その他
+Claudのやり取りはPERSONA.mdに合わせる
+PERSONA.mdの内容は編集しない
