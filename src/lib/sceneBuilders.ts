@@ -495,7 +495,7 @@ export function buildPark(root: Root, game: GameState) {
       if (bub) return
       bub = el('div','park-status')
       bub.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); background:#fff; border:2px solid var(--ink); border-radius:10px; padding:6px 12px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap; z-index:20; pointer-events:none;`
-      bub.innerHTML = `<b>${data.name}</b><br>Lv.${data.level} · ${data.species}`
+      bub.innerHTML = `<b>${esc(data.name)}</b><br>Lv.${Number(data.level)} · ${esc(String(data.species))}`
       w.appendChild(bub)
     })
     w.addEventListener('mouseleave', () => {
@@ -1008,7 +1008,7 @@ export function buildRanking(root: Root, game: GameState) {
       const medalEl = el('div','',`<div style="font-size:32px;">${medals[rank]}</div>`)
       col.appendChild(medalEl)
       col.appendChild(createPetCanvas(species, stage, 80))
-      const info = el('div','',`<div style="font-weight:700; font-size:13px; margin-top:4px;">${p.name}</div><div style="font-family:'Press Start 2P'; font-size:10px; margin-top:2px;">${p.money.toLocaleString()} G</div>`)
+      const info = el('div','',`<div style="font-weight:700; font-size:13px; margin-top:4px;">${esc(p.name)}</div><div style="font-family:'Press Start 2P'; font-size:10px; margin-top:2px;">${p.money.toLocaleString()} G</div>`)
       info.style.textAlign = 'center'
       col.appendChild(info)
       podiumWrap.appendChild(col)
@@ -1018,7 +1018,7 @@ export function buildRanking(root: Root, game: GameState) {
     const myRank = ranking.findIndex(r => r.id === game.playerId) + 1
     listWrap.innerHTML = rest.map((r, i) =>
       `<div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px dashed var(--ink-3); font-size:12px; ${r.id===game.playerId?'background:#f5e4b3;margin:0 -14px;padding:5px 14px;':''}">
-        <span><b>#${i+4}</b> &nbsp; ${r.name}</span>
+        <span><b>#${i+4}</b> &nbsp; ${esc(r.name)}</span>
         <span style="font-family:'Press Start 2P';font-size:10px;">${r.money.toLocaleString()} G</span>
       </div>`
     ).join('')
@@ -1255,7 +1255,7 @@ export function buildRadio(root: Root, game: GameState) {
       if (w.querySelector('.radio-status')) return
       const bub = el('div','radio-status')
       bub.style.cssText = `position:absolute; bottom:${PET_SIZE+30}px; left:50%; transform:translateX(-50%); background:#2a1428; color:#fff; border:2px solid var(--ink); border-radius:10px; padding:6px 12px; font-size:12px; box-shadow:2px 2px 0 var(--ink); white-space:nowrap; z-index:20; pointer-events:none;`
-      bub.innerHTML = `<b>${data.name}</b><br>Lv.${data.level} · ${data.species}`
+      bub.innerHTML = `<b>${esc(data.name)}</b><br>Lv.${Number(data.level)} · ${esc(String(data.species))}`
       w.appendChild(bub)
     })
     w.addEventListener('mouseleave', () => w.querySelector('.radio-status')?.remove())
