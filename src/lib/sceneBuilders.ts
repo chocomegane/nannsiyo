@@ -289,8 +289,8 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
   const floorFoods: FloorFood[] = []
 
   function placeFood(foodItemId: string, emoji: string) {
-    const ix = 20 + Math.random() * 60  // 20–80%
-    const iy = 63 + Math.random() * 12  // 63–75%
+    const ix = 5 + Math.random() * 88   // 5–93%
+    const iy = 10 + Math.random() * 82  // 10–92%
     const foodEl = el('div')
     foodEl.style.cssText = 'position:absolute; font-size:30px; z-index:4; cursor:grab; user-select:none; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.25));'
     foodEl.textContent = emoji
@@ -305,8 +305,8 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     const onMove = (e: MouseEvent) => {
       if (!dragging) return
       const rect = room.getBoundingClientRect()
-      entry.x = Math.max(5, Math.min(93, ((e.clientX - rect.left) / rect.width) * 100))
-      entry.y = Math.max(40, Math.min(83, ((e.clientY - rect.top) / rect.height) * 100))
+      entry.x = Math.max(1, Math.min(97, ((e.clientX - rect.left) / rect.width) * 100))
+      entry.y = Math.max(5, Math.min(97, ((e.clientY - rect.top) / rect.height) * 100))
       applyPos()
     }
     const onUp = () => { if (dragging) { dragging = false; foodEl.style.cursor = 'grab' } }
@@ -359,8 +359,8 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
         const dist = Math.sqrt(dx*dx + dy*dy)
         if (dist < 1.5) {
           petIdleUntil = now + 3000 + Math.random() * 5000
-          petTargetX = 28 + Math.random() * 44
-          petTargetY = 50 + Math.random() * 18
+          petTargetX = 5 + Math.random() * 90
+          petTargetY = 10 + Math.random() * 80
         } else {
           const speed = 0.065
           petX += (dx / dist) * speed
@@ -370,8 +370,8 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
       }
     }
 
-    petX = Math.max(10, Math.min(88, petX))
-    petY = Math.max(36, Math.min(78, petY))
+    petX = Math.max(2, Math.min(97, petX))
+    petY = Math.max(8, Math.min(94, petY))
     const bob = Math.sin(now / 750) * 3
     petWrap.style.left = petX + '%'
     petWrap.style.top = petY + '%'
@@ -646,8 +646,8 @@ export function buildPark(root: Root, game: GameState) {
   type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
 
   // 目標地点ベースの自然な歩行状態
-  const X_MIN = 120, X_MAX = 960
-  const Y_MIN = 410, Y_MAX = 470  // 地面付近のみ
+  const X_MIN = 20, X_MAX = 1060
+  const Y_MIN = 300, Y_MAX = 560
 
   type WanderState = {
     x: number; y: number
@@ -1422,8 +1422,8 @@ export function buildRadio(root: Root, game: GameState) {
   const PET_SIZE = 80
   type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
 
-  const X_MIN = 120, X_MAX = 960
-  const Y_MIN = 410, Y_MAX = 470
+  const X_MIN = 20, X_MAX = 1060
+  const Y_MIN = 300, Y_MAX = 560
 
   type WanderState = { x:number; y:number; targetX:number; targetY:number; speed:number; idleUntil:number; facing:number; phase:number }
 
