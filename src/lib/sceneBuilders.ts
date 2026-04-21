@@ -4,6 +4,7 @@ import type { GameState } from './sceneGame'
 import { fetchRanking, fetchBoard, postBoard, playLottery } from './api'
 import { bgm, RADIO_TRACKS } from './bgm'
 import { FURNITURE_TABLE } from '../data/furniture'
+import { FOOD_TABLE } from '../data/foods'
 import { usePlayerStore } from '../store/playerStore'
 import { usePetStore } from '../store/petStore'
 import { io } from 'socket.io-client'
@@ -272,6 +273,79 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     setTimeout(() => emote.remove(), 1300)
   }
 
+  function openFoodMenu() {
+    const existing = root.querySelector('#foodMenuOverlay')
+    if (existing) { existing.remove(); return }
+
+    const overlay = el('div')
+    overlay.id = 'foodMenuOverlay'
+    overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:center; z-index:100;'
+
+    const panel = el('div','panel')
+    panel.style.cssText = 'width:480px; max-height:70vh; overflow-y:auto; background:var(--paper); padding:16px;'
+
+    function renderFoodPanel() {
+      const ps = usePlayerStore.getState()
+      const foodInv = ps.foodInventory
+      let html = `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h2 style="margin:0; font-size:16px;">🍽️ エサをあげる</h2>
+          <button class="btn" id="foodClose">✕</button>
+        </div>`
+
+      if (foodInv.length > 0) {
+        html += `<p style="font-size:12px; font-weight:700; color:var(--ink-2); margin-bottom:6px;">所持中のエサ</p>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">`
+        for (const item of foodInv) {
+          const m = FOOD_TABLE.find(f => f.foodId === item.foodId)
+          html += `<button class="btn primary" data-use="${item.id}" style="font-size:13px;">${m?.emoji ?? '🍎'} ${esc(item.name)}</button>`
+        }
+        html += `</div>`
+      } else {
+        html += `<p style="font-size:12px; color:var(--ink-2); margin-bottom:12px;">所持中のエサはありません。下のショップで購入してください。</p>`
+      }
+
+      html += `<p style="font-size:12px; font-weight:700; color:var(--ink-2); margin-bottom:6px;">ショップ（所持金: ${ps.money.toLocaleString()}G）</p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">`
+      for (const food of FOOD_TABLE) {
+        const canAfford = ps.money >= food.price
+        html += `<button class="btn" data-buy="${food.foodId}" style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; ${canAfford ? '' : 'opacity:0.45;'}">
+          <span>${food.emoji} ${esc(food.name)}</span>
+          <span style="font-size:11px; font-weight:700; color:var(--accent);">🪙${food.price}G</span>
+        </button>`
+      }
+      html += `</div>`
+      panel.innerHTML = html
+
+      panel.querySelector('#foodClose')!.addEventListener('click', () => overlay.remove())
+      panel.querySelectorAll<HTMLElement>('[data-use]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.use!
+          usePlayerStore.getState().useFood(id)
+          game.toast('🍎 おいしい！')
+          renderFoodPanel()
+        })
+      })
+      panel.querySelectorAll<HTMLElement>('[data-buy]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const foodId = btn.dataset.buy!
+          const ok = usePlayerStore.getState().buyFood(foodId)
+          const food = FOOD_TABLE.find(f => f.foodId === foodId)
+          if (!ok) { game.toast('コインが足りません'); return }
+          game.toast(`${food?.emoji} ${food?.name} を購入！`)
+          const moneyEl = root.querySelector<HTMLElement>('#roomMoney')
+          if (moneyEl) moneyEl.textContent = `🪙 ${usePlayerStore.getState().money.toLocaleString()} G`
+          renderFoodPanel()
+        })
+      })
+    }
+
+    renderFoodPanel()
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove() })
+    overlay.appendChild(panel)
+    root.appendChild(overlay)
+  }
+
   function openPetDetail() {
     const overlay = el('div')
     overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:center; z-index:100;'
@@ -353,7 +427,7 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     const b = (e.target as HTMLElement).closest<HTMLElement>('[data-action]')
     if (!b) return
     const a = b.dataset.action
-    if (a === 'feed')  { game.feedPet(); game.toast('🍎 おいしい！') }
+    if (a === 'feed')  { openFoodMenu() }
     if (a === 'pet')   { game.petPet(); game.toast('💕 うれしい！'); playEmote('💕') }
     if (a === 'skill') { game.toast('🔥 スキル発動！'); playEmote('🔥') }
     if (a === 'collect') {
