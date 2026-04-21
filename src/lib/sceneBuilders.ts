@@ -118,6 +118,107 @@ function showStatusBubble(parent: HTMLElement, x: number, y: number, game: GameS
   return b
 }
 
+// ── 共通: エサメニューモーダル ────────────────────────────────────────────
+function openFoodMenuModal(root: HTMLElement, game: GameState, onUse: (foodItemId: string, emoji: string) => void) {
+  const existing = root.querySelector('#foodMenuOverlay')
+  if (existing) { existing.remove(); return }
+
+  const overlay = el('div')
+  overlay.id = 'foodMenuOverlay'
+  overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:center; z-index:100;'
+
+  const panel = el('div','panel')
+  panel.style.cssText = 'width:560px; max-height:75vh; display:flex; flex-direction:column; background:var(--paper); padding:16px; gap:10px;'
+
+  let activeCategory = FOOD_CATEGORIES[0].id
+
+  function renderFoodPanel() {
+    const ps = usePlayerStore.getState()
+    const foodInv = ps.foodInventory
+    const countMap = new Map<string, number>()
+    for (const item of foodInv) countMap.set(item.foodId, (countMap.get(item.foodId) ?? 0) + 1)
+
+    let invHtml = ''
+    if (countMap.size > 0) {
+      invHtml = `<div style="background:var(--paper-2); border:1.5px solid var(--ink-3); border-radius:10px; padding:10px;">
+        <p style="font-size:11px; font-weight:700; color:var(--ink-2); margin:0 0 6px;">🎒 所持中のエサ（クリックで使用）</p>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">`
+      for (const [foodId, cnt] of countMap.entries()) {
+        const m = FOOD_TABLE.find(f => f.foodId === foodId)!
+        const item = foodInv.find(f => f.foodId === foodId)!
+        invHtml += `<button class="btn primary" data-use="${item.id}" style="font-size:12px; position:relative; padding:5px 10px;">
+          ${m.emoji} ${esc(m.name)}
+          <span style="position:absolute; top:-6px; right:-6px; background:#e74c3c; color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;">${cnt}</span>
+        </button>`
+      }
+      invHtml += `</div></div>`
+    } else {
+      invHtml = `<div style="background:var(--paper-2); border:1.5px dashed var(--ink-3); border-radius:10px; padding:10px; font-size:12px; color:var(--ink-2); text-align:center;">所持中のエサはありません。下のショップで購入してください。</div>`
+    }
+
+    const tabHtml = `<div style="display:flex; gap:4px; flex-wrap:wrap;">` +
+      FOOD_CATEGORIES.map(c => `<button data-tab="${c.id}" style="padding:4px 10px; border-radius:20px; border:1.5px solid var(--ink); font-size:11px; font-weight:700; cursor:pointer; background:${c.id === activeCategory ? 'var(--accent)' : 'var(--paper-2)'}; color:${c.id === activeCategory ? '#fff' : 'var(--ink)'};">${c.label}</button>`).join('') + `</div>`
+
+    const filtered = FOOD_TABLE.filter(f => f.category === activeCategory)
+    let shopHtml = `<div style="overflow-y:auto; flex:1;"><div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">`
+    for (const food of filtered) {
+      const canAfford = ps.money >= food.price
+      const owned = countMap.get(food.foodId) ?? 0
+      shopHtml += `<button class="btn" data-buy="${food.foodId}" style="display:flex; align-items:center; gap:6px; padding:7px 10px; ${canAfford ? '' : 'opacity:0.45;'}">
+        <span style="font-size:20px;">${food.emoji}</span>
+        <span style="flex:1; text-align:left; font-size:12px;">${esc(food.name)}</span>
+        ${owned > 0 ? `<span style="background:#27ae60; color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; font-weight:700;">×${owned}</span>` : ''}
+        <span style="font-size:11px; font-weight:700; color:var(--accent); white-space:nowrap;">🪙${food.price}G</span>
+      </button>`
+    }
+    shopHtml += `</div></div>`
+
+    panel.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2 style="margin:0; font-size:16px;">🍽️ エサをあげる</h2>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:12px; color:var(--ink-2);">🪙 ${ps.money.toLocaleString()}G</span>
+          <button class="btn" id="foodClose">✕</button>
+        </div>
+      </div>
+      ${invHtml}
+      <p style="font-size:11px; font-weight:700; color:var(--ink-2); margin:0;">🛒 ショップ</p>
+      ${tabHtml}
+      ${shopHtml}
+    `
+
+    panel.querySelector('#foodClose')!.addEventListener('click', () => overlay.remove())
+    panel.querySelectorAll<HTMLElement>('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => { activeCategory = btn.dataset.tab as typeof activeCategory; renderFoodPanel() })
+    })
+    panel.querySelectorAll<HTMLElement>('[data-use]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.use!
+        const item = usePlayerStore.getState().foodInventory.find(f => f.id === id)
+        const m = FOOD_TABLE.find(f => f.foodId === item?.foodId)
+        onUse(id, m?.emoji ?? '🍎')
+        overlay.remove()
+        game.toast(`${m?.emoji ?? '🍎'} ${m?.name ?? 'エサ'} を床に置いた！`)
+      })
+    })
+    panel.querySelectorAll<HTMLElement>('[data-buy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const foodId = btn.dataset.buy!
+        const ok = usePlayerStore.getState().buyFood(foodId)
+        const food = FOOD_TABLE.find(f => f.foodId === foodId)
+        if (!ok) { game.toast('コインが足りません'); return }
+        game.toast(`${food?.emoji} ${food?.name} を購入！`)
+        renderFoodPanel()
+      })
+    })
+  }
+
+  renderFoodPanel()
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove() })
+  overlay.appendChild(panel)
+  root.appendChild(overlay)
+}
+
 // ── ROOM ──────────────────────────────────────────────────────────────────
 export function buildRoom(root: Root, game: GameState, _showScene: (k: string) => void) {
   const time = game.time
@@ -345,7 +446,7 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
         floorFoods.splice(floorFoods.indexOf(nearest), 1)
         playEmote('😋')
       } else {
-        const speed = 0.3
+        const speed = 0.15
         petX += (dx / dist) * speed
         petY += (dy / dist) * speed * 0.4
         petFacing = dx > 0 ? 1 : -1
@@ -381,112 +482,7 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
   roomRafId = requestAnimationFrame(roomLoop)
 
   function openFoodMenu() {
-    const existing = root.querySelector('#foodMenuOverlay')
-    if (existing) { existing.remove(); return }
-
-    const overlay = el('div')
-    overlay.id = 'foodMenuOverlay'
-    overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:center; z-index:100;'
-
-    const panel = el('div','panel')
-    panel.style.cssText = 'width:560px; max-height:75vh; display:flex; flex-direction:column; background:var(--paper); padding:16px; gap:10px;'
-
-    let activeCategory = FOOD_CATEGORIES[0].id
-
-    function renderFoodPanel() {
-      const ps = usePlayerStore.getState()
-      const foodInv = ps.foodInventory
-      // foodIdごとの在庫数
-      const countMap = new Map<string, number>()
-      for (const item of foodInv) countMap.set(item.foodId, (countMap.get(item.foodId) ?? 0) + 1)
-
-      // 所持エサ（種類・個数まとめ）
-      let invHtml = ''
-      if (countMap.size > 0) {
-        invHtml = `<div style="background:var(--paper-2); border:1.5px solid var(--ink-3); border-radius:10px; padding:10px;">
-          <p style="font-size:11px; font-weight:700; color:var(--ink-2); margin:0 0 6px;">🎒 所持中のエサ（クリックで使用）</p>
-          <div style="display:flex; flex-wrap:wrap; gap:6px;">`
-        for (const [foodId, cnt] of countMap.entries()) {
-          const m = FOOD_TABLE.find(f => f.foodId === foodId)!
-          const item = foodInv.find(f => f.foodId === foodId)!
-          invHtml += `<button class="btn primary" data-use="${item.id}" style="font-size:12px; position:relative; padding:5px 10px;">
-            ${m.emoji} ${esc(m.name)}
-            <span style="position:absolute; top:-6px; right:-6px; background:#e74c3c; color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;">${cnt}</span>
-          </button>`
-        }
-        invHtml += `</div></div>`
-      } else {
-        invHtml = `<div style="background:var(--paper-2); border:1.5px dashed var(--ink-3); border-radius:10px; padding:10px; font-size:12px; color:var(--ink-2); text-align:center;">
-          所持中のエサはありません。下のショップで購入してください。
-        </div>`
-      }
-
-      // カテゴリタブ
-      const tabHtml = `<div style="display:flex; gap:4px; flex-wrap:wrap;">` +
-        FOOD_CATEGORIES.map(c => `<button data-tab="${c.id}" style="padding:4px 10px; border-radius:20px; border:1.5px solid var(--ink); font-size:11px; font-weight:700; cursor:pointer; background:${c.id === activeCategory ? 'var(--accent)' : 'var(--paper-2)'}; color:${c.id === activeCategory ? '#fff' : 'var(--ink)'};">${c.label}</button>`).join('') + `</div>`
-
-      // ショップリスト
-      const filtered = FOOD_TABLE.filter(f => f.category === activeCategory)
-      let shopHtml = `<div style="overflow-y:auto; flex:1;"><div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">`
-      for (const food of filtered) {
-        const canAfford = ps.money >= food.price
-        const owned = countMap.get(food.foodId) ?? 0
-        shopHtml += `<button class="btn" data-buy="${food.foodId}" style="display:flex; align-items:center; gap:6px; padding:7px 10px; ${canAfford ? '' : 'opacity:0.45;'}">
-          <span style="font-size:20px;">${food.emoji}</span>
-          <span style="flex:1; text-align:left; font-size:12px;">${esc(food.name)}</span>
-          ${owned > 0 ? `<span style="background:#27ae60; color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; font-weight:700;">×${owned}</span>` : ''}
-          <span style="font-size:11px; font-weight:700; color:var(--accent); white-space:nowrap;">🪙${food.price}G</span>
-        </button>`
-      }
-      shopHtml += `</div></div>`
-
-      panel.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <h2 style="margin:0; font-size:16px;">🍽️ エサをあげる</h2>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:12px; color:var(--ink-2);">🪙 ${ps.money.toLocaleString()}G</span>
-            <button class="btn" id="foodClose">✕</button>
-          </div>
-        </div>
-        ${invHtml}
-        <p style="font-size:11px; font-weight:700; color:var(--ink-2); margin:0;">🛒 ショップ</p>
-        ${tabHtml}
-        ${shopHtml}
-      `
-
-      panel.querySelector('#foodClose')!.addEventListener('click', () => overlay.remove())
-      panel.querySelectorAll<HTMLElement>('[data-tab]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          activeCategory = btn.dataset.tab as typeof activeCategory
-          renderFoodPanel()
-        })
-      })
-      panel.querySelectorAll<HTMLElement>('[data-use]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const id = btn.dataset.use!
-          const item = usePlayerStore.getState().foodInventory.find(f => f.id === id)
-          const m = FOOD_TABLE.find(f => f.foodId === item?.foodId)
-          placeFood(id, m?.emoji ?? '🍎')
-          overlay.remove()
-          game.toast(`${m?.emoji ?? '🍎'} ${m?.name ?? 'エサ'} を床に置いた！`)
-        })
-      })
-      panel.querySelectorAll<HTMLElement>('[data-buy]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const foodId = btn.dataset.buy!
-          const ok = usePlayerStore.getState().buyFood(foodId)
-          const food = FOOD_TABLE.find(f => f.foodId === foodId)
-          if (!ok) { game.toast('コインが足りません'); return }
-          game.toast(`${food?.emoji} ${food?.name} を購入！`)
-          renderFoodPanel()
-        })
-      })
-    }
-
-    renderFoodPanel()
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove() })
-    overlay.appendChild(panel)
-    root.appendChild(overlay)
+    openFoodMenuModal(root, game, (foodItemId, emoji) => { placeFood(foodItemId, emoji) })
   }
 
   function openPetDetail() {
@@ -807,6 +803,52 @@ export function buildPark(root: Root, game: GameState) {
     if (canvas) canvas.style.transform = dir < 0 ? 'scaleX(-1)' : 'scaleX(1)'
   }
 
+  // ── 公園の床エサシステム ──
+  type ParkFloorFood = { foodItemId: string; emoji: string; x: number; y: number; el: HTMLElement; cleanup: () => void }
+  const floorFoods: ParkFloorFood[] = []
+
+  function placeParkFood(foodItemId: string, emoji: string) {
+    const x = X_MIN + Math.random() * (X_MAX - X_MIN)
+    const y = Y_MIN + Math.random() * (Y_MAX - Y_MIN)
+    const foodEl = el('div')
+    foodEl.style.cssText = `position:absolute; left:${x-18}px; top:${y-18}px; font-size:30px; cursor:grab; user-select:none; pointer-events:auto; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.3)); z-index:5;`
+    foodEl.textContent = emoji
+    const entry: ParkFloorFood = { foodItemId, emoji, x, y, el: foodEl, cleanup: () => {} }
+    let dragging = false
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return
+      const rect = petLayer.getBoundingClientRect()
+      entry.x = Math.max(X_MIN, Math.min(X_MAX, e.clientX - rect.left))
+      entry.y = Math.max(Y_MIN, Math.min(Y_MAX, e.clientY - rect.top))
+      foodEl.style.left = (entry.x - 18) + 'px'
+      foodEl.style.top  = (entry.y - 18) + 'px'
+    }
+    const onUp = () => { if (dragging) { dragging = false; foodEl.style.cursor = 'grab' } }
+    foodEl.addEventListener('mousedown', (e) => { dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault() })
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    entry.cleanup = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    petLayer.appendChild(foodEl)
+    floorFoods.push(entry)
+  }
+
+  function eatFood(entry: ParkFloorFood, eaterName: string, isYou: boolean) {
+    const idx = floorFoods.indexOf(entry)
+    if (idx === -1) return
+    floorFoods.splice(idx, 1)
+    entry.el.style.transition = 'transform 0.2s, opacity 0.2s'
+    entry.el.style.transform = 'scale(0)'
+    entry.el.style.opacity = '0'
+    setTimeout(() => entry.el.remove(), 220)
+    entry.cleanup()
+    if (isYou) {
+      usePlayerStore.getState().useFood(entry.foodItemId)
+      game.toast(`${entry.emoji} もぐもぐ！ おいしい！`)
+    } else {
+      game.toast(`${entry.emoji} ${eaterName}が食べた！`)
+    }
+  }
+
   // ── アニメーションループ ──
   let rafId = 0
   let lastMoveEmit = 0
@@ -814,14 +856,53 @@ export function buildPark(root: Root, game: GameState) {
   function tick() {
     const now = performance.now()
 
-    // 自分
-    const youBob = stepWander(youWander, now)
+    // 自分 — 空腹なら餌を追う
+    const isYouHungry = game.pet.hun < 1.0
+    let youBob = 0
+    if (isYouHungry && floorFoods.length > 0) {
+      const nearest = floorFoods.reduce((a, b) => {
+        const da = (a.x-youWander.x)**2+(a.y-youWander.y)**2
+        const db = (b.x-youWander.x)**2+(b.y-youWander.y)**2
+        return da < db ? a : b
+      })
+      const dx = nearest.x - youWander.x, dy = nearest.y - youWander.y
+      const dist = Math.sqrt(dx*dx + dy*dy)
+      if (dist < 25) {
+        eatFood(nearest, youWander.x > 0 ? '' : '', true)
+      } else {
+        youWander.x += (dx/dist) * 1.5
+        youWander.y += (dy/dist) * 0.75
+        youWander.facing = dx > 0 ? 1 : -1
+      }
+      youBob = Math.abs(Math.sin(now/280)) * 5
+    } else {
+      youBob = stepWander(youWander, now)
+    }
     setFacing(youWrapper, youWander.facing)
     setPetPos(youWrapper, youWander.x, youWander.y, youBob)
 
-    // 他プレイヤー（各自ローカル歩行 + サーバー座標へソフト補正済み）
+    // 他プレイヤー — 常に餌を追う（空腹扱い）
     peers.forEach(peer => {
-      const bob = stepWander(peer.wander, now)
+      let bob = 0
+      if (floorFoods.length > 0) {
+        const nearest = floorFoods.reduce((a, b) => {
+          const da = (a.x-peer.wander.x)**2+(a.y-peer.wander.y)**2
+          const db = (b.x-peer.wander.x)**2+(b.y-peer.wander.y)**2
+          return da < db ? a : b
+        })
+        const dx = nearest.x - peer.wander.x, dy = nearest.y - peer.wander.y
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        if (dist < 25) {
+          eatFood(nearest, peer.data.name, false)
+        } else {
+          peer.wander.x += (dx/dist) * 1.5
+          peer.wander.y += (dy/dist) * 0.75
+          peer.wander.facing = dx > 0 ? 1 : -1
+        }
+        bob = Math.abs(Math.sin(now/280)) * 5
+      } else {
+        bob = stepWander(peer.wander, now)
+      }
       setFacing(peer.wrapper, peer.wander.facing)
       setPetPos(peer.wrapper, peer.wander.x, peer.wander.y, bob)
     })
@@ -844,6 +925,7 @@ export function buildPark(root: Root, game: GameState) {
     <span style="color:var(--ink-2); font-size:11px;">(← → で移動 / 60文字まで)</span>
     <input id="chatInput" type="text" maxlength="60" placeholder="メッセージを入力…" style="flex:1; padding:8px 12px; border:2px solid var(--ink); border-radius:8px; font-family:inherit; font-size:13px; background:#fff;" />
     <button class="btn primary" id="chatSend">送信</button>
+    <button class="btn" id="parkFeedBtn">🍎 エサ</button>
     <span id="parkCount" style="color:var(--ink-2); font-size:11px;">● オンライン 1 人</span>
   `
   root.appendChild(chatDock)
@@ -864,6 +946,9 @@ export function buildPark(root: Root, game: GameState) {
     if (e.key === 'Enter') sendChat()
   })
   chatSend.addEventListener('click', sendChat)
+  chatDock.querySelector<HTMLElement>('#parkFeedBtn')!.addEventListener('click', () => {
+    openFoodMenuModal(root, game, (foodItemId, emoji) => { placeParkFood(foodItemId, emoji) })
+  })
 
   addBoardObject(root, 'park', game.playerId)
 
@@ -871,6 +956,7 @@ export function buildPark(root: Root, game: GameState) {
   ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
     socket.disconnect()
     cancelAnimationFrame(rafId)
+    floorFoods.forEach(f => f.cleanup())
   }
 }
 
@@ -1582,17 +1668,105 @@ export function buildRadio(root: Root, game: GameState) {
     if (canvas) canvas.style.transform = dir<0?'scaleX(-1)':'scaleX(1)'
   }
 
+  // ── ラジオの床エサシステム ──
+  type RadioFloorFood = { foodItemId: string; emoji: string; x: number; y: number; el: HTMLElement; cleanup: () => void }
+  const floorFoodsR: RadioFloorFood[] = []
+
+  function placeRadioFood(foodItemId: string, emoji: string) {
+    const x = X_MIN + Math.random() * (X_MAX - X_MIN)
+    const y = Y_MIN + Math.random() * (Y_MAX - Y_MIN)
+    const foodEl = el('div')
+    foodEl.style.cssText = `position:absolute; left:${x-18}px; top:${y-18}px; font-size:30px; cursor:grab; user-select:none; pointer-events:auto; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); z-index:5;`
+    foodEl.textContent = emoji
+    const entry: RadioFloorFood = { foodItemId, emoji, x, y, el: foodEl, cleanup: () => {} }
+    let dragging = false
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return
+      const rect = petLayer.getBoundingClientRect()
+      entry.x = Math.max(X_MIN, Math.min(X_MAX, e.clientX - rect.left))
+      entry.y = Math.max(Y_MIN, Math.min(Y_MAX, e.clientY - rect.top))
+      foodEl.style.left = (entry.x - 18) + 'px'
+      foodEl.style.top  = (entry.y - 18) + 'px'
+    }
+    const onUp = () => { if (dragging) { dragging = false; foodEl.style.cursor = 'grab' } }
+    foodEl.addEventListener('mousedown', (e) => { dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault() })
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    entry.cleanup = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    petLayer.appendChild(foodEl)
+    floorFoodsR.push(entry)
+  }
+
+  function eatRadioFood(entry: RadioFloorFood, eaterName: string, isYou: boolean) {
+    const idx = floorFoodsR.indexOf(entry)
+    if (idx === -1) return
+    floorFoodsR.splice(idx, 1)
+    entry.el.style.transition = 'transform 0.2s, opacity 0.2s'
+    entry.el.style.transform = 'scale(0)'
+    entry.el.style.opacity = '0'
+    setTimeout(() => entry.el.remove(), 220)
+    entry.cleanup()
+    if (isYou) {
+      usePlayerStore.getState().useFood(entry.foodItemId)
+      game.toast(`${entry.emoji} もぐもぐ！ おいしい！`)
+    } else {
+      game.toast(`${entry.emoji} ${eaterName}が食べた！`)
+    }
+  }
+
   let rafId = 0, lastMoveEmit = 0
   function tick() {
     const now = performance.now()
-    const youBob = stepWander(youWander, now)
+
+    const isYouHungry = game.pet.hun < 1.0
+    let youBob = 0
+    if (isYouHungry && floorFoodsR.length > 0) {
+      const nearest = floorFoodsR.reduce((a, b) => {
+        const da = (a.x-youWander.x)**2+(a.y-youWander.y)**2
+        const db = (b.x-youWander.x)**2+(b.y-youWander.y)**2
+        return da < db ? a : b
+      })
+      const dx = nearest.x - youWander.x, dy = nearest.y - youWander.y
+      const dist = Math.sqrt(dx*dx + dy*dy)
+      if (dist < 25) {
+        eatRadioFood(nearest, '', true)
+      } else {
+        youWander.x += (dx/dist) * 1.5
+        youWander.y += (dy/dist) * 0.75
+        youWander.facing = dx > 0 ? 1 : -1
+      }
+      youBob = Math.abs(Math.sin(now/280)) * 5
+    } else {
+      youBob = stepWander(youWander, now)
+    }
     setFacing(youWrapper, youWander.facing)
     setPetPos(youWrapper, youWander.x, youWander.y, youBob)
+
     peers.forEach(peer => {
-      const bob = stepWander(peer.wander, now)
+      let bob = 0
+      if (floorFoodsR.length > 0) {
+        const nearest = floorFoodsR.reduce((a, b) => {
+          const da = (a.x-peer.wander.x)**2+(a.y-peer.wander.y)**2
+          const db = (b.x-peer.wander.x)**2+(b.y-peer.wander.y)**2
+          return da < db ? a : b
+        })
+        const dx = nearest.x - peer.wander.x, dy = nearest.y - peer.wander.y
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        if (dist < 25) {
+          eatRadioFood(nearest, peer.data.name, false)
+        } else {
+          peer.wander.x += (dx/dist) * 1.5
+          peer.wander.y += (dy/dist) * 0.75
+          peer.wander.facing = dx > 0 ? 1 : -1
+        }
+        bob = Math.abs(Math.sin(now/280)) * 5
+      } else {
+        bob = stepWander(peer.wander, now)
+      }
       setFacing(peer.wrapper, peer.wander.facing)
       setPetPos(peer.wrapper, peer.wander.x, peer.wander.y, bob)
     })
+
     if (now-lastMoveEmit > 150) {
       socket.emit('move', { x:Math.round(youWander.x), y:youWander.y })
       lastMoveEmit = now
@@ -1674,6 +1848,7 @@ export function buildRadio(root: Root, game: GameState) {
     <span style="font-weight:700; font-size:13px; color:#ff88cc;">💬 チャット</span>
     <input id="chatInput" type="text" maxlength="60" placeholder="メッセージを入力…" style="flex:1; padding:8px 12px; border:2px solid #8844aa; border-radius:8px; font-family:inherit; font-size:13px; background:#2a1428; color:#fff;" />
     <button class="btn primary" id="chatSend">送信</button>
+    <button class="btn" id="radioFeedBtn">🍎 エサ</button>
   `
   root.appendChild(chatDock)
 
@@ -1687,6 +1862,9 @@ export function buildRadio(root: Root, game: GameState) {
   }
   chatInput.addEventListener('keydown', e => { e.stopPropagation(); if (e.key==='Enter') sendChat() })
   chatDock.querySelector('#chatSend')!.addEventListener('click', sendChat)
+  chatDock.querySelector<HTMLElement>('#radioFeedBtn')!.addEventListener('click', () => {
+    openFoodMenuModal(root, game, (foodItemId, emoji) => { placeRadioFood(foodItemId, emoji) })
+  })
 
   addBoardObject(root, 'radio', game.playerId)
 
@@ -1695,6 +1873,7 @@ export function buildRadio(root: Root, game: GameState) {
     cancelAnimationFrame(rafId)
     audio.pause()
     audio.src = ''
+    floorFoodsR.forEach(f => f.cleanup())
   }
 }
 
