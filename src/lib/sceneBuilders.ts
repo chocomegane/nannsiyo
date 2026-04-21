@@ -187,9 +187,16 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
 
   // Pet canvas overlay
   const petWrap = document.createElement('div')
-  petWrap.style.cssText = 'position:absolute; left:50%; top:58%; transform:translate(-50%,-50%); cursor:pointer; z-index:3;'
+  petWrap.style.cssText = 'position:absolute; cursor:pointer; z-index:3;'
   petWrap.appendChild(createPetCanvas(game.pet.species as Species, game.pet.stage, 160))
   room.appendChild(petWrap)
+
+  // ── ルーム内ペット位置状態 ──
+  let petX = 50, petY = 58
+  let petTargetX = 50, petTargetY = 58
+  let petIdleUntil = performance.now() + 1500
+  let petFacing = 1
+  let roomRafId = 0
 
   let currentBubble: HTMLElement | null = null
   petWrap.addEventListener('click', () => {
@@ -240,7 +247,11 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     prevDropCount = curr
     renderDrops()
   })
-  ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = unsub
+  ;(root as HTMLElement & { _cleanup?: () => void })._cleanup = () => {
+    cancelAnimationFrame(roomRafId)
+    floorFoods.forEach(f => f.cleanup())
+    unsub()
+  }
 
   // ドロップカウントダウン表示
   let dropCdSec = 45
@@ -272,6 +283,102 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     room.appendChild(emote)
     setTimeout(() => emote.remove(), 1300)
   }
+
+  // ── 床の餌システム ──────────────────────────────────────────────────────
+  type FloorFood = { foodItemId: string; emoji: string; x: number; y: number; el: HTMLElement; cleanup: () => void }
+  const floorFoods: FloorFood[] = []
+
+  function placeFood(foodItemId: string, emoji: string) {
+    const ix = 20 + Math.random() * 60  // 20–80%
+    const iy = 63 + Math.random() * 12  // 63–75%
+    const foodEl = el('div')
+    foodEl.style.cssText = 'position:absolute; font-size:30px; z-index:4; cursor:grab; user-select:none; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.25));'
+    foodEl.textContent = emoji
+    const entry: FloorFood = { foodItemId, emoji, x: ix, y: iy, el: foodEl, cleanup: () => {} }
+    function applyPos() {
+      foodEl.style.left = entry.x + '%'
+      foodEl.style.top = entry.y + '%'
+      foodEl.style.transform = 'translate(-50%,-50%)'
+    }
+    applyPos()
+    let dragging = false
+    const onMove = (e: MouseEvent) => {
+      if (!dragging) return
+      const rect = room.getBoundingClientRect()
+      entry.x = Math.max(5, Math.min(93, ((e.clientX - rect.left) / rect.width) * 100))
+      entry.y = Math.max(40, Math.min(83, ((e.clientY - rect.top) / rect.height) * 100))
+      applyPos()
+    }
+    const onUp = () => { if (dragging) { dragging = false; foodEl.style.cursor = 'grab' } }
+    foodEl.addEventListener('mousedown', (e) => { dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault() })
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    entry.cleanup = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+    room.appendChild(foodEl)
+    floorFoods.push(entry)
+  }
+
+  // ── ルームRAFループ（ゆったり動き・餌追いかけ） ──────────────────────
+  function roomLoop() {
+    const now = performance.now()
+    const isHungry = game.pet.hun < 1.0
+
+    if (isHungry && floorFoods.length > 0) {
+      // 最寄りの餌を探して近づく
+      let nearest = floorFoods[0]
+      let minDist = Infinity
+      for (const f of floorFoods) {
+        const dx = f.x - petX, dy = f.y - petY
+        if (dx*dx + dy*dy < minDist) { minDist = dx*dx + dy*dy; nearest = f }
+      }
+      const dx = nearest.x - petX, dy = nearest.y - petY
+      const dist = Math.sqrt(dx*dx + dy*dy)
+      if (dist < 3) {
+        // 食べる
+        usePlayerStore.getState().useFood(nearest.foodItemId)
+        game.toast(`${nearest.emoji} もぐもぐ！ おいしい！`)
+        nearest.el.style.transition = 'transform 0.2s, opacity 0.2s'
+        nearest.el.style.transform = 'translate(-50%,-50%) scale(0)'
+        nearest.el.style.opacity = '0'
+        setTimeout(() => nearest.el.remove(), 220)
+        nearest.cleanup()
+        floorFoods.splice(floorFoods.indexOf(nearest), 1)
+        playEmote('😋')
+      } else {
+        const speed = 0.3
+        petX += (dx / dist) * speed
+        petY += (dy / dist) * speed * 0.4
+        petFacing = dx > 0 ? 1 : -1
+      }
+    } else {
+      // ゆったりウロウロ（公園より遅い・休憩多め）
+      if (now < petIdleUntil) {
+        // 休憩中
+      } else {
+        const dx = petTargetX - petX, dy = petTargetY - petY
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        if (dist < 1.5) {
+          petIdleUntil = now + 3000 + Math.random() * 5000
+          petTargetX = 28 + Math.random() * 44
+          petTargetY = 50 + Math.random() * 18
+        } else {
+          const speed = 0.065
+          petX += (dx / dist) * speed
+          petY += (dy / dist) * speed * 0.4
+          petFacing = dx > 0 ? 1 : -1
+        }
+      }
+    }
+
+    petX = Math.max(10, Math.min(88, petX))
+    petY = Math.max(36, Math.min(78, petY))
+    const bob = Math.sin(now / 750) * 3
+    petWrap.style.left = petX + '%'
+    petWrap.style.top = petY + '%'
+    petWrap.style.transform = `translate(-50%, calc(-50% + ${bob}px)) scaleX(${petFacing})`
+    roomRafId = requestAnimationFrame(roomLoop)
+  }
+  roomRafId = requestAnimationFrame(roomLoop)
 
   function openFoodMenu() {
     const existing = root.querySelector('#foodMenuOverlay')
@@ -359,9 +466,9 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
           const id = btn.dataset.use!
           const item = usePlayerStore.getState().foodInventory.find(f => f.id === id)
           const m = FOOD_TABLE.find(f => f.foodId === item?.foodId)
-          usePlayerStore.getState().useFood(id)
-          game.toast(`${m?.emoji ?? '🍎'} ${m?.name ?? 'エサ'} をあげた！`)
-          renderFoodPanel()
+          placeFood(id, m?.emoji ?? '🍎')
+          overlay.remove()
+          game.toast(`${m?.emoji ?? '🍎'} ${m?.name ?? 'エサ'} を床に置いた！`)
         })
       })
       panel.querySelectorAll<HTMLElement>('[data-buy]').forEach(btn => {
