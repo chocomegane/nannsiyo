@@ -30,7 +30,7 @@ export async function loadRadioTracks(): Promise<BgmTrack[]> {
 }
 
 const DEFAULT_INDEX: Partial<Record<Scene, number>> = {
-  room: 0, furniture: 0, park: 1, dungeon: 2, ranking: 3,
+  room: 0, furniture: 0, park: 1, dungeon: 2, lottery: 3, ranking: 4,
 }
 
 class BgmManager {

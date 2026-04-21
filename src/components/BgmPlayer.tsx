@@ -4,9 +4,9 @@ import { useWorldStore } from '../store/worldStore'
 import type { Scene } from '../types'
 
 const SCENE_LABELS: Partial<Record<Scene, string>> = {
-  room: '自室', furniture: '家具店', park: '公園', dungeon: 'ダンジョン', ranking: 'ランキング',
+  room: '自室', furniture: '家具店', park: '公園', dungeon: 'ダンジョン', lottery: '宝くじ店', ranking: 'ランキング',
 }
-const SCENES: Scene[] = ['room', 'furniture', 'park', 'dungeon', 'ranking']
+const SCENES: Scene[] = ['room', 'furniture', 'park', 'dungeon', 'lottery', 'ranking']
 
 export default function BgmPlayer({ compact }: { compact?: boolean }) {
   const scene = useWorldStore((s) => s.scene)

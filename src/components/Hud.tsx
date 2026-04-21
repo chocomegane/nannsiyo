@@ -8,6 +8,7 @@ const TITLES: Record<string, string> = {
   room:      '🏠 じぶんの部屋',
   park:      '🌳 ひかりの公園',
   dungeon:   '⚔️ ダンジョン',
+  lottery:   '🎰 宝くじ店「幸運堂」',
   ranking:   '🏆 ランキング',
   furniture: '🛋️ インテリアショップ',
 }

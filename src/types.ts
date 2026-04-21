@@ -68,4 +68,4 @@ export interface Player {
   inventory: DroppedItem[]
 }
 
-export type Scene = 'room' | 'park' | 'dungeon' | 'ranking' | 'furniture' | 'radio'
+export type Scene = 'room' | 'park' | 'dungeon' | 'lottery' | 'ranking' | 'furniture' | 'radio'
