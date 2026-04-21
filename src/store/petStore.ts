@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Pet } from '../types'
 import { FOOD_TABLE } from '../data/foods'
-import { getSkillsByLevel } from '../data/skills'
+import { getSkillsForLevel } from '../data/skillThresholds'
 import { expToNextLevel, MAX_LEVEL } from '../data/experience'
 
 interface PetState {
@@ -68,7 +68,10 @@ export const usePetStore = create<PetState>((set) => ({
       const needed = expToNextLevel(pet.level)
       if (newExp >= needed) {
         const newLevel = pet.level + 1
-        const newSkills = getSkillsByLevel(newLevel).map((s) => s.id)
+        const gained = getSkillsForLevel(newLevel)
+        const newSkills = gained.length > 0
+          ? [...new Set([...pet.unlockedSkills, ...gained])]
+          : pet.unlockedSkills
         return {
           pet: { ...pet, level: newLevel, exp: newExp - needed, unlockedSkills: newSkills },
           levelUpPending: true,

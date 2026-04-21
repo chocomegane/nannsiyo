@@ -1,7 +1,7 @@
 export const MAX_LEVEL = 100
 
 export function expRequiredForLevel(level: number): number {
-  return Math.floor(100 * Math.pow(level, 1.5))
+  return 50 * level * level
 }
 
 export function expToNextLevel(currentLevel: number): number {
