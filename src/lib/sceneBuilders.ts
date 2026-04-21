@@ -579,7 +579,7 @@ export function buildPark(root: Root, game: GameState) {
   })
 
   socket.on('park:chat', ({ id, message }: { id: string; message: string }) => {
-    if (id === socket.id) { showChatBubble(youWrapper, message); return }
+    if (id === game.playerId) return
     const peer = Array.from(peers.values()).find(p => p.data.id === id)
     if (peer) showChatBubble(peer.wrapper, message)
   })
@@ -1355,7 +1355,7 @@ export function buildRadio(root: Root, game: GameState) {
   })
 
   socket.on('radio:chat', ({ id, message }: { id: string; message: string }) => {
-    if (id === socket.id) { showChatBubble(youWrapper, message); return }
+    if (id === game.playerId) return
     const peer = Array.from(peers.values()).find(p => p.data.id === id)
     if (peer) showChatBubble(peer.wrapper, message)
   })

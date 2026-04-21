@@ -55,7 +55,7 @@ export function registerRadioHandlers(io: Server) {
     socket.on('chat', (message: string) => {
       const player = radioPlayers.get(socket.id)
       if (!player) return
-      ns.emit('radio:chat', { id: socket.id, name: player.name, species: player.species, message: String(message).slice(0, 60) })
+      ns.emit('radio:chat', { id: player.id, name: player.name, species: player.species, message: String(message).slice(0, 60) })
     })
 
     socket.on('disconnect', () => {

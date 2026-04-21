@@ -38,7 +38,7 @@ export function registerParkHandlers(io: Server) {
       if (!player) return
       parkPlayers.forEach((p, sid) => {
         if (p.scene === player.scene) {
-          ns.to(sid).emit('park:chat', { id: socket.id, name: player.name, species: player.species, message: String(message).slice(0, 60) })
+          ns.to(sid).emit('park:chat', { id: player.id, name: player.name, species: player.species, message: String(message).slice(0, 60) })
         }
       })
     })
