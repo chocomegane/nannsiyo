@@ -4,7 +4,7 @@ import type { GameState } from './sceneGame'
 import { fetchRanking, fetchBoard, postBoard, playLottery } from './api'
 import { bgm, RADIO_TRACKS } from './bgm'
 import { FURNITURE_TABLE } from '../data/furniture'
-import { FOOD_TABLE } from '../data/foods'
+import { FOOD_TABLE, FOOD_CATEGORIES } from '../data/foods'
 import { usePlayerStore } from '../store/playerStore'
 import { usePetStore } from '../store/petStore'
 import { io } from 'socket.io-client'
@@ -282,47 +282,85 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:center; z-index:100;'
 
     const panel = el('div','panel')
-    panel.style.cssText = 'width:480px; max-height:70vh; overflow-y:auto; background:var(--paper); padding:16px;'
+    panel.style.cssText = 'width:560px; max-height:75vh; display:flex; flex-direction:column; background:var(--paper); padding:16px; gap:10px;'
+
+    let activeCategory = FOOD_CATEGORIES[0].id
 
     function renderFoodPanel() {
       const ps = usePlayerStore.getState()
       const foodInv = ps.foodInventory
-      let html = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-          <h2 style="margin:0; font-size:16px;">🍽️ エサをあげる</h2>
-          <button class="btn" id="foodClose">✕</button>
-        </div>`
+      // foodIdごとの在庫数
+      const countMap = new Map<string, number>()
+      for (const item of foodInv) countMap.set(item.foodId, (countMap.get(item.foodId) ?? 0) + 1)
 
-      if (foodInv.length > 0) {
-        html += `<p style="font-size:12px; font-weight:700; color:var(--ink-2); margin-bottom:6px;">所持中のエサ</p>
-        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px;">`
-        for (const item of foodInv) {
-          const m = FOOD_TABLE.find(f => f.foodId === item.foodId)
-          html += `<button class="btn primary" data-use="${item.id}" style="font-size:13px;">${m?.emoji ?? '🍎'} ${esc(item.name)}</button>`
+      // 所持エサ（種類・個数まとめ）
+      let invHtml = ''
+      if (countMap.size > 0) {
+        invHtml = `<div style="background:var(--paper-2); border:1.5px solid var(--ink-3); border-radius:10px; padding:10px;">
+          <p style="font-size:11px; font-weight:700; color:var(--ink-2); margin:0 0 6px;">🎒 所持中のエサ（クリックで使用）</p>
+          <div style="display:flex; flex-wrap:wrap; gap:6px;">`
+        for (const [foodId, cnt] of countMap.entries()) {
+          const m = FOOD_TABLE.find(f => f.foodId === foodId)!
+          const item = foodInv.find(f => f.foodId === foodId)!
+          invHtml += `<button class="btn primary" data-use="${item.id}" style="font-size:12px; position:relative; padding:5px 10px;">
+            ${m.emoji} ${esc(m.name)}
+            <span style="position:absolute; top:-6px; right:-6px; background:#e74c3c; color:#fff; border-radius:50%; width:18px; height:18px; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;">${cnt}</span>
+          </button>`
         }
-        html += `</div>`
+        invHtml += `</div></div>`
       } else {
-        html += `<p style="font-size:12px; color:var(--ink-2); margin-bottom:12px;">所持中のエサはありません。下のショップで購入してください。</p>`
+        invHtml = `<div style="background:var(--paper-2); border:1.5px dashed var(--ink-3); border-radius:10px; padding:10px; font-size:12px; color:var(--ink-2); text-align:center;">
+          所持中のエサはありません。下のショップで購入してください。
+        </div>`
       }
 
-      html += `<p style="font-size:12px; font-weight:700; color:var(--ink-2); margin-bottom:6px;">ショップ（所持金: ${ps.money.toLocaleString()}G）</p>
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">`
-      for (const food of FOOD_TABLE) {
+      // カテゴリタブ
+      const tabHtml = `<div style="display:flex; gap:4px; flex-wrap:wrap;">` +
+        FOOD_CATEGORIES.map(c => `<button data-tab="${c.id}" style="padding:4px 10px; border-radius:20px; border:1.5px solid var(--ink); font-size:11px; font-weight:700; cursor:pointer; background:${c.id === activeCategory ? 'var(--accent)' : 'var(--paper-2)'}; color:${c.id === activeCategory ? '#fff' : 'var(--ink)'};">${c.label}</button>`).join('') + `</div>`
+
+      // ショップリスト
+      const filtered = FOOD_TABLE.filter(f => f.category === activeCategory)
+      let shopHtml = `<div style="overflow-y:auto; flex:1;"><div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">`
+      for (const food of filtered) {
         const canAfford = ps.money >= food.price
-        html += `<button class="btn" data-buy="${food.foodId}" style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; ${canAfford ? '' : 'opacity:0.45;'}">
-          <span>${food.emoji} ${esc(food.name)}</span>
-          <span style="font-size:11px; font-weight:700; color:var(--accent);">🪙${food.price}G</span>
+        const owned = countMap.get(food.foodId) ?? 0
+        shopHtml += `<button class="btn" data-buy="${food.foodId}" style="display:flex; align-items:center; gap:6px; padding:7px 10px; ${canAfford ? '' : 'opacity:0.45;'}">
+          <span style="font-size:20px;">${food.emoji}</span>
+          <span style="flex:1; text-align:left; font-size:12px;">${esc(food.name)}</span>
+          ${owned > 0 ? `<span style="background:#27ae60; color:#fff; border-radius:10px; padding:1px 6px; font-size:10px; font-weight:700;">×${owned}</span>` : ''}
+          <span style="font-size:11px; font-weight:700; color:var(--accent); white-space:nowrap;">🪙${food.price}G</span>
         </button>`
       }
-      html += `</div>`
-      panel.innerHTML = html
+      shopHtml += `</div></div>`
+
+      panel.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="margin:0; font-size:16px;">🍽️ エサをあげる</h2>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:12px; color:var(--ink-2);">🪙 ${ps.money.toLocaleString()}G</span>
+            <button class="btn" id="foodClose">✕</button>
+          </div>
+        </div>
+        ${invHtml}
+        <p style="font-size:11px; font-weight:700; color:var(--ink-2); margin:0;">🛒 ショップ</p>
+        ${tabHtml}
+        ${shopHtml}
+      `
 
       panel.querySelector('#foodClose')!.addEventListener('click', () => overlay.remove())
+      panel.querySelectorAll<HTMLElement>('[data-tab]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeCategory = btn.dataset.tab as typeof activeCategory
+          renderFoodPanel()
+        })
+      })
       panel.querySelectorAll<HTMLElement>('[data-use]').forEach(btn => {
         btn.addEventListener('click', () => {
           const id = btn.dataset.use!
+          const item = usePlayerStore.getState().foodInventory.find(f => f.id === id)
+          const m = FOOD_TABLE.find(f => f.foodId === item?.foodId)
           usePlayerStore.getState().useFood(id)
-          game.toast('🍎 おいしい！')
+          game.toast(`${m?.emoji ?? '🍎'} ${m?.name ?? 'エサ'} をあげた！`)
           renderFoodPanel()
         })
       })
@@ -333,8 +371,6 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
           const food = FOOD_TABLE.find(f => f.foodId === foodId)
           if (!ok) { game.toast('コインが足りません'); return }
           game.toast(`${food?.emoji} ${food?.name} を購入！`)
-          const moneyEl = root.querySelector<HTMLElement>('#roomMoney')
-          if (moneyEl) moneyEl.textContent = `🪙 ${usePlayerStore.getState().money.toLocaleString()} G`
           renderFoodPanel()
         })
       })
