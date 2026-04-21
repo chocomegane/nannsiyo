@@ -10,6 +10,10 @@ import { io } from 'socket.io-client'
 
 type Root = HTMLElement
 
+function esc(s: string): string {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
 function el(tag: string, cls?: string, html?: string): HTMLElement {
   const e = document.createElement(tag)
   if (cls) e.className = cls
@@ -56,9 +60,9 @@ export function openBoard(scene: string, playerId: string) {
       const dateStr = `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
       return `<div style="background:var(--paper-2);border:1.5px solid var(--ink);border-radius:10px;padding:8px 12px;">
         <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--ink-2);margin-bottom:3px;">
-          <b>${p.player_name}</b><span>${dateStr}</span>
+          <b>${esc(p.player_name)}</b><span>${esc(dateStr)}</span>
         </div>
-        <div style="font-size:13px;word-break:break-all;">${p.message.replace(/</g,'&lt;')}</div>
+        <div style="font-size:13px;word-break:break-all;">${esc(p.message)}</div>
       </div>`
     }).join('')
   }
@@ -532,7 +536,7 @@ export function buildPark(root: Root, game: GameState) {
 
   // ── Socket.io接続 ──
   const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
-  const socket = io(BASE_URL + '/park', { transports: ['websocket','polling'] })
+  const socket = io(BASE_URL + '/park', { transports: ['websocket','polling'], auth: { playerId: game.playerId } })
 
   socket.on('connect', () => {
     socket.emit('join', { id: game.playerId, name: currentPet.name, species: currentPet.species, level: currentPet.lv, scene: 'park' })
@@ -703,7 +707,7 @@ export function buildDungeon(root: Root, game: GameState, showScene: (k: string)
 
   // ── Socket.io ──
   const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
-  const socket = io(BASE_URL + '/dungeon', { transports: ['websocket','polling'] })
+  const socket = io(BASE_URL + '/dungeon', { transports: ['websocket','polling'], auth: { playerId: game.playerId } })
 
   type PlayerState = { playerId: string; name: string; species: string; level: number; hp: number; maxHp: number; alive: boolean; defending: boolean }
   type EnemyState  = { name: string; emoji: string; lv: number; hp: number; maxHp: number; atk: number; reward: number }
@@ -1286,7 +1290,7 @@ export function buildRadio(root: Root, game: GameState) {
 
   // ── Socket ──
   const BASE_URL = (import.meta as { env: Record<string,string> }).env.VITE_API_URL ?? ''
-  const socket = io(BASE_URL+'/radio', { transports:['websocket','polling'] })
+  const socket = io(BASE_URL+'/radio', { transports:['websocket','polling'], auth: { playerId: game.playerId } })
   let currentStationIdx = bgm.radioStation
   const audio = new Audio()
   audio.volume = bgm.volume
