@@ -6,7 +6,7 @@ import { usePlayerStore } from './store/playerStore'
 import { loadState, saveState } from './lib/api'
 import { PlayerIdContext } from './lib/playerContext'
 import { useFurnitureStore } from './store/furnitureStore'
-import { bgm, loadBgmTracks } from './lib/bgm'
+import { bgm, loadBgmTracks, loadRadioTracks } from './lib/bgm'
 import LoginScreen from './components/LoginScreen'
 import Sidebar from './components/Sidebar'
 import Hud from './components/Hud'
@@ -33,7 +33,7 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
-      await loadBgmTracks()
+      await Promise.all([loadBgmTracks(), loadRadioTracks()])
       const savedId = localStorage.getItem(PLAYER_ID_KEY)
       if (savedId) {
         const data = await loadState(savedId)

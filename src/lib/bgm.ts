@@ -4,19 +4,29 @@ import { fetchSettings, saveSettings } from './api'
 export interface BgmTrack { label: string; src: string }
 
 export let BGM_TRACKS: BgmTrack[] = []
+export let RADIO_TRACKS: BgmTrack[] = []
 
-export async function loadBgmTracks(): Promise<BgmTrack[]> {
+async function loadTracks(path: string): Promise<BgmTrack[]> {
   try {
-    const res = await fetch('/bgm/')
+    const res = await fetch(path)
     if (!res.ok) return []
     const files: { name: string; type: string }[] = await res.json()
-    BGM_TRACKS = files
+    return files
       .filter((f) => f.type === 'file' && f.name.match(/\.(mp3|ogg|wav|m4a)$/i))
-      .map((f) => ({ label: f.name, src: '/bgm/' + encodeURIComponent(f.name) }))
-    return BGM_TRACKS
+      .map((f) => ({ label: f.name, src: path + encodeURIComponent(f.name) }))
   } catch {
     return []
   }
+}
+
+export async function loadBgmTracks(): Promise<BgmTrack[]> {
+  BGM_TRACKS = await loadTracks('/bgm/')
+  return BGM_TRACKS
+}
+
+export async function loadRadioTracks(): Promise<BgmTrack[]> {
+  RADIO_TRACKS = await loadTracks('/radio/')
+  return RADIO_TRACKS
 }
 
 const DEFAULT_INDEX: Partial<Record<Scene, number>> = {

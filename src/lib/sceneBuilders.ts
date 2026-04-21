@@ -2,7 +2,7 @@ import { createPetCanvas } from './pixelpet'
 import type { Species } from '../types'
 import type { GameState } from './sceneGame'
 import { fetchRanking, fetchBoard, postBoard } from './api'
-import { bgm } from './bgm'
+import { bgm, RADIO_TRACKS } from './bgm'
 import { FURNITURE_TABLE } from '../data/furniture'
 import { usePlayerStore } from '../store/playerStore'
 import { usePetStore } from '../store/petStore'
@@ -1149,16 +1149,6 @@ export function buildFriendRoom(root: Root, game: GameState, showScene: (k: stri
 }
 
 // ── RADIO ROOM ─────────────────────────────────────────────────────────────
-const RADIO_STATIONS = [
-  { name: 'NHK ラジオ第1（東京）', emoji: '📡', url: 'https://radio-stream.nhk.jp/hls/live/2023229/nhkradiruakr1/master48k.m3u8' },
-  { name: 'NHK FM（東京）',        emoji: '🎵', url: 'https://radio-stream.nhk.jp/hls/live/2023507/nhkradiruakfm/master48k.m3u8' },
-  { name: 'NHK ラジオ第1（大阪）', emoji: '📡', url: 'https://radio-stream.nhk.jp/hls/live/2023508/nhkradirubkr1/master48k.m3u8' },
-  { name: 'NHK FM（大阪）',        emoji: '🎵', url: 'https://radio-stream.nhk.jp/hls/live/2023509/nhkradirubkfm/master48k.m3u8' },
-  { name: 'NHK ラジオ第1（名古屋）',emoji: '📡', url: 'https://radio-stream.nhk.jp/hls/live/2023510/nhkradiruckr1/master48k.m3u8' },
-  { name: 'NHK FM（名古屋）',      emoji: '🎵', url: 'https://radio-stream.nhk.jp/hls/live/2023511/nhkradiruckfm/master48k.m3u8' },
-  { name: 'NHK ラジオ第1（札幌）', emoji: '📡', url: 'https://radio-stream.nhk.jp/hls/live/2023545/nhkradiruikr1/master.m3u8' },
-  { name: 'NHK FM（札幌）',        emoji: '🎵', url: 'https://radio-stream.nhk.jp/hls/live/2023546/nhkradiruikfm/master.m3u8' },
-]
 
 export function buildRadio(root: Root, game: GameState) {
   root.style.background = 'linear-gradient(180deg,#2a1e3a 0%,#3a2a4a 60%,#4a3a5a 100%)'
@@ -1298,22 +1288,21 @@ export function buildRadio(root: Root, game: GameState) {
 
   function loadStation(idx: number, save = true) {
     currentStationIdx = idx
-    const s = RADIO_STATIONS[idx]
-    if (!s) return
-    audio.src = s.url
+    const track = RADIO_TRACKS[idx]
+    if (!track) { audio.pause(); updateRadioUI(); return }
+    audio.src = track.src
+    audio.loop = true
     audio.play().catch(() => {})
     if (save) bgm.setRadioStation(idx)
     updateRadioUI()
   }
 
   function updateRadioUI() {
-    const s = RADIO_STATIONS[currentStationIdx]
-    const nameEl = root.querySelector<HTMLElement>('#radioStationName')
-    if (nameEl && s) nameEl.textContent = `${s.emoji} ${s.name}`
-    root.querySelectorAll<HTMLElement>('.station-btn').forEach((btn, i) => {
-      btn.style.background = i===currentStationIdx ? 'var(--accent)' : '#2a1428'
-      btn.style.color = i===currentStationIdx ? '#fff' : '#ccc'
-    })
+    const track = RADIO_TRACKS[currentStationIdx]
+    const nameEl = root.querySelector<HTMLElement>('#radioTrackName')
+    if (nameEl) nameEl.textContent = track ? track.label : '(トラックなし)'
+    const sel = root.querySelector<HTMLSelectElement>('#radioTrackSelect')
+    if (sel) sel.value = String(currentStationIdx)
     const countEl = root.querySelector<HTMLElement>('#radioCount')
     if (countEl) countEl.textContent = `● ${peers.size+1} 人がリスニング中`
   }
@@ -1398,18 +1387,21 @@ export function buildRadio(root: Root, game: GameState) {
   // ── ラジオUIパネル ──
   const radioPanel = el('div')
   radioPanel.style.cssText = `position:absolute; top:12px; right:16px; width:260px; background:#1a0e28; border:2px solid #8844aa; border-radius:14px; box-shadow:0 0 16px #8844aa44; padding:12px 14px; z-index:10; color:#fff;`
+  const trackOptions = RADIO_TRACKS.length > 0
+    ? RADIO_TRACKS.map((t, i) => `<option value="${i}">${esc(t.label)}</option>`).join('')
+    : `<option value="-1">(public/radio/ にMP3を置いてください)</option>`
   radioPanel.innerHTML = `
-    <div style="font-size:13px; font-weight:700; margin-bottom:8px; color:#ff88cc;">📻 ラジオ</div>
-    <div id="radioStationName" style="font-size:12px; margin-bottom:10px; color:#ffccee; min-height:18px;">接続中...</div>
-    <div style="display:flex; flex-direction:column; gap:5px;">
-      ${RADIO_STATIONS.map((s,i)=>`
-        <button class="station-btn" data-idx="${i}"
-          style="padding:5px 10px; border-radius:8px; border:1.5px solid #8844aa; background:#2a1428; color:#ccc; cursor:pointer; font-size:12px; text-align:left; transition:background 0.2s;">
-          ${s.emoji} ${s.name}
-        </button>
-      `).join('')}
+    <div style="font-size:13px; font-weight:700; margin-bottom:8px; color:#ff88cc;">🎵 ラジオルーム</div>
+    <div id="radioTrackName" style="font-size:11px; margin-bottom:8px; color:#ffccee; min-height:16px; word-break:break-all;"></div>
+    <select id="radioTrackSelect" style="width:100%; background:#2a1428; color:#fff; border:1.5px solid #8844aa; border-radius:8px; padding:5px 8px; font-size:12px; margin-bottom:10px;">
+      ${trackOptions}
+    </select>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+      <button id="radioPrev" style="background:#2a1428; border:1.5px solid #8844aa; color:#ccc; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:14px;">⏮</button>
+      <button id="radioPlayPause" style="background:#8844aa; border:none; color:#fff; border-radius:8px; padding:4px 14px; cursor:pointer; font-size:14px;">▶</button>
+      <button id="radioNext" style="background:#2a1428; border:1.5px solid #8844aa; color:#ccc; border-radius:8px; padding:4px 10px; cursor:pointer; font-size:14px;">⏭</button>
     </div>
-    <div style="margin-top:10px; display:flex; align-items:center; gap:8px;">
+    <div style="display:flex; align-items:center; gap:8px;">
       <span style="font-size:11px; color:#aaa;">音量</span>
       <input id="radioVol" type="range" min="0" max="1" step="0.05" value="${bgm.volume}" style="flex:1; accent-color:#ff88cc;" />
       <button id="radioMute" style="background:none; border:none; color:#ccc; cursor:pointer; font-size:16px;" title="ミュート">${bgm.muted ? '🔇' : '🔊'}</button>
@@ -1418,12 +1410,31 @@ export function buildRadio(root: Root, game: GameState) {
   `
   root.appendChild(radioPanel)
 
-  radioPanel.querySelectorAll<HTMLElement>('.station-btn').forEach((btn, i) => {
-    btn.addEventListener('click', () => {
-      socket.emit('change_station', { index: i })
-      loadStation(i)
-    })
+  const trackSelect = radioPanel.querySelector<HTMLSelectElement>('#radioTrackSelect')!
+  trackSelect.addEventListener('change', () => {
+    const idx = parseInt(trackSelect.value)
+    if (idx >= 0) { socket.emit('change_station', { index: idx }); loadStation(idx) }
   })
+
+  const prevBtn = radioPanel.querySelector<HTMLElement>('#radioPrev')!
+  prevBtn.addEventListener('click', () => {
+    const idx = (currentStationIdx - 1 + RADIO_TRACKS.length) % RADIO_TRACKS.length
+    socket.emit('change_station', { index: idx }); loadStation(idx)
+  })
+
+  const nextBtn = radioPanel.querySelector<HTMLElement>('#radioNext')!
+  nextBtn.addEventListener('click', () => {
+    const idx = (currentStationIdx + 1) % RADIO_TRACKS.length
+    socket.emit('change_station', { index: idx }); loadStation(idx)
+  })
+
+  const playPauseBtn = radioPanel.querySelector<HTMLElement>('#radioPlayPause')!
+  playPauseBtn.addEventListener('click', () => {
+    if (audio.paused) { audio.play().catch(() => {}); playPauseBtn.textContent = '⏸' }
+    else { audio.pause(); playPauseBtn.textContent = '▶' }
+  })
+  audio.addEventListener('play', () => { playPauseBtn.textContent = '⏸' })
+  audio.addEventListener('pause', () => { playPauseBtn.textContent = '▶' })
 
   const volSlider = radioPanel.querySelector<HTMLInputElement>('#radioVol')!
   volSlider.addEventListener('input', () => {
