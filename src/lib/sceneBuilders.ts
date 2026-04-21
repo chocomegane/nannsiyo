@@ -814,17 +814,22 @@ export function buildPark(root: Root, game: GameState) {
     foodEl.style.cssText = `position:absolute; left:${x-18}px; top:${y-18}px; font-size:30px; cursor:grab; user-select:none; pointer-events:auto; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.3)); z-index:5;`
     foodEl.textContent = emoji
     const entry: ParkFloorFood = { foodItemId, emoji, x, y, el: foodEl, cleanup: () => {} }
-    let dragging = false
+    let dragging = false, dragOffX = 0, dragOffY = 0
     const onMove = (e: MouseEvent) => {
       if (!dragging) return
       const rect = petLayer.getBoundingClientRect()
-      entry.x = Math.max(X_MIN, Math.min(X_MAX, e.clientX - rect.left))
-      entry.y = Math.max(Y_MIN, Math.min(Y_MAX, e.clientY - rect.top))
+      entry.x = Math.max(X_MIN, Math.min(X_MAX, (e.clientX - rect.left) - dragOffX))
+      entry.y = Math.max(Y_MIN, Math.min(Y_MAX, (e.clientY - rect.top) - dragOffY))
       foodEl.style.left = (entry.x - 18) + 'px'
       foodEl.style.top  = (entry.y - 18) + 'px'
     }
     const onUp = () => { if (dragging) { dragging = false; foodEl.style.cursor = 'grab' } }
-    foodEl.addEventListener('mousedown', (e) => { dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault() })
+    foodEl.addEventListener('mousedown', (e) => {
+      dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault()
+      const rect = petLayer.getBoundingClientRect()
+      dragOffX = (e.clientX - rect.left) - entry.x
+      dragOffY = (e.clientY - rect.top) - entry.y
+    })
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     entry.cleanup = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
@@ -1679,17 +1684,22 @@ export function buildRadio(root: Root, game: GameState) {
     foodEl.style.cssText = `position:absolute; left:${x-18}px; top:${y-18}px; font-size:30px; cursor:grab; user-select:none; pointer-events:auto; filter:drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); z-index:5;`
     foodEl.textContent = emoji
     const entry: RadioFloorFood = { foodItemId, emoji, x, y, el: foodEl, cleanup: () => {} }
-    let dragging = false
+    let dragging = false, dragOffX = 0, dragOffY = 0
     const onMove = (e: MouseEvent) => {
       if (!dragging) return
       const rect = petLayer.getBoundingClientRect()
-      entry.x = Math.max(X_MIN, Math.min(X_MAX, e.clientX - rect.left))
-      entry.y = Math.max(Y_MIN, Math.min(Y_MAX, e.clientY - rect.top))
+      entry.x = Math.max(X_MIN, Math.min(X_MAX, (e.clientX - rect.left) - dragOffX))
+      entry.y = Math.max(Y_MIN, Math.min(Y_MAX, (e.clientY - rect.top) - dragOffY))
       foodEl.style.left = (entry.x - 18) + 'px'
       foodEl.style.top  = (entry.y - 18) + 'px'
     }
     const onUp = () => { if (dragging) { dragging = false; foodEl.style.cursor = 'grab' } }
-    foodEl.addEventListener('mousedown', (e) => { dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault() })
+    foodEl.addEventListener('mousedown', (e) => {
+      dragging = true; foodEl.style.cursor = 'grabbing'; e.preventDefault()
+      const rect = petLayer.getBoundingClientRect()
+      dragOffX = (e.clientX - rect.left) - entry.x
+      dragOffY = (e.clientY - rect.top) - entry.y
+    })
     window.addEventListener('mousemove', onMove)
     window.addEventListener('mouseup', onUp)
     entry.cleanup = () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
