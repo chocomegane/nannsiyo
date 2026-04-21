@@ -642,8 +642,8 @@ export function buildPark(root: Root, game: GameState) {
   type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
 
   // 目標地点ベースの自然な歩行状態
-  const X_MIN = 20, X_MAX = 1060
-  const Y_MIN = 300, Y_MAX = 560
+  const X_MIN = 0, X_MAX = 1080
+  const Y_MIN = 20, Y_MAX = 580
 
   type WanderState = {
     x: number; y: number
@@ -1508,8 +1508,8 @@ export function buildRadio(root: Root, game: GameState) {
   const PET_SIZE = 80
   type PeerData = { id: string; name: string; species: string; level: number; x: number; y: number }
 
-  const X_MIN = 20, X_MAX = 1060
-  const Y_MIN = 300, Y_MAX = 560
+  const X_MIN = 0, X_MAX = 1080
+  const Y_MIN = 20, Y_MAX = 580
 
   type WanderState = { x:number; y:number; targetX:number; targetY:number; speed:number; idleUntil:number; facing:number; phase:number }
 
