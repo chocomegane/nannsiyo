@@ -19,7 +19,7 @@ services:
     environment:
       - PORT=3000
       - DATABASE_URL=/data/game.db
-      - FRONTEND_URL=http://localhost:8080
+      - FRONTEND_URL=https://tokachitomato.top
     volumes:
       - db_data:/data
     restart: unless-stopped
