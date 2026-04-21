@@ -840,10 +840,23 @@ export function buildPark(root: Root, game: GameState) {
     if (peer) peer.wander.targetX = x
   })
 
+  // ── チャット履歴（入室〜退室まで最大15件）──
+  type ChatLog = { name: string; message: string; time: string }
+  const chatHistory: ChatLog[] = []
+  function addChatLog(name: string, message: string) {
+    const now = new Date()
+    const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+    chatHistory.push({ name, message, time })
+    if (chatHistory.length > 15) chatHistory.shift()
+  }
+
   socket.on('park:chat', ({ id, message }: { id: string; message: string }) => {
     if (id === game.playerId) return
     const peer = Array.from(peers.values()).find(p => p.data.id === id)
-    if (peer) showChatBubble(peer.wrapper, message)
+    if (peer) {
+      showChatBubble(peer.wrapper, message)
+      addChatLog(peer.data.name, message)
+    }
   })
 
   // ペットのcanvasに向き反転を適用するヘルパー
@@ -983,6 +996,7 @@ export function buildPark(root: Root, game: GameState) {
     <input id="chatInput" type="text" maxlength="60" placeholder="メッセージを入力…" style="flex:1; padding:8px 12px; border:2px solid var(--ink); border-radius:8px; font-family:inherit; font-size:13px; background:#fff;" />
     <button class="btn primary" id="chatSend">送信</button>
     <button class="btn" id="parkFeedBtn">🍎 エサ</button>
+    <button class="btn" id="parkHistBtn">📜 履歴</button>
     <span id="parkCount" style="color:var(--ink-2); font-size:11px;">● オンライン 1 人</span>
   `
   root.appendChild(chatDock)
@@ -995,7 +1009,36 @@ export function buildPark(root: Root, game: GameState) {
     if (!msg) return
     socket.emit('chat', msg)
     showChatBubble(youWrapper, msg)
+    addChatLog(currentPet.name + ' (you)', msg)
     chatInput.value = ''
+  }
+
+  function openChatHistory() {
+    const existing = root.querySelector('#chatHistOverlay')
+    if (existing) { existing.remove(); return }
+    const overlay = el('div')
+    overlay.id = 'chatHistOverlay'
+    overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.4); display:grid; place-items:center; z-index:100;'
+    const panel = el('div','panel')
+    panel.style.cssText = 'width:420px; max-height:60vh; display:flex; flex-direction:column; background:var(--paper); padding:16px; gap:8px;'
+    const rows = chatHistory.length === 0
+      ? '<div style="color:var(--ink-2);font-size:13px;text-align:center;padding:20px;">チャット履歴はありません</div>'
+      : chatHistory.map(c => `<div style="display:flex;gap:8px;align-items:baseline;font-size:13px;border-bottom:1px solid var(--ink-3);padding:5px 0;">
+          <span style="font-size:10px;color:var(--ink-2);white-space:nowrap;">${esc(c.time)}</span>
+          <span style="font-weight:700;white-space:nowrap;">${esc(c.name)}</span>
+          <span style="word-break:break-all;">${esc(c.message)}</span>
+        </div>`).join('')
+    panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b style="font-size:15px;">📜 チャット履歴（最大15件）</b>
+        <button class="btn" id="histClose">✕</button>
+      </div>
+      <div style="overflow-y:auto;flex:1;">${rows}</div>
+    `
+    panel.querySelector('#histClose')!.addEventListener('click', () => overlay.remove())
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove() })
+    overlay.appendChild(panel)
+    root.appendChild(overlay)
   }
 
   chatInput.addEventListener('keydown', e => {
@@ -1006,6 +1049,7 @@ export function buildPark(root: Root, game: GameState) {
   chatDock.querySelector<HTMLElement>('#parkFeedBtn')!.addEventListener('click', () => {
     openFoodMenuModal(root, game, (foodItemId, emoji) => { placeParkFood(foodItemId, emoji) })
   })
+  chatDock.querySelector<HTMLElement>('#parkHistBtn')!.addEventListener('click', openChatHistory)
 
   addBoardObject(root, 'park', game.playerId)
 
@@ -1738,10 +1782,23 @@ export function buildRadio(root: Root, game: GameState) {
     if (peer) peer.wander.targetX = x
   })
 
+  // ── チャット履歴（ラジオ）──
+  type RadioChatLog = { name: string; message: string; time: string }
+  const radioChatHistory: RadioChatLog[] = []
+  function addRadioChatLog(name: string, message: string) {
+    const now = new Date()
+    const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+    radioChatHistory.push({ name, message, time })
+    if (radioChatHistory.length > 15) radioChatHistory.shift()
+  }
+
   socket.on('radio:chat', ({ id, message }: { id: string; message: string }) => {
     if (id === game.playerId) return
     const peer = Array.from(peers.values()).find(p => p.data.id === id)
-    if (peer) showChatBubble(peer.wrapper, message)
+    if (peer) {
+      showChatBubble(peer.wrapper, message)
+      addRadioChatLog(peer.data.name, message)
+    }
   })
 
   function setFacing(wrapper: HTMLElement, dir: number) {
@@ -1937,6 +1994,7 @@ export function buildRadio(root: Root, game: GameState) {
     <input id="chatInput" type="text" maxlength="60" placeholder="メッセージを入力…" style="flex:1; padding:8px 12px; border:2px solid #8844aa; border-radius:8px; font-family:inherit; font-size:13px; background:#2a1428; color:#fff;" />
     <button class="btn primary" id="chatSend">送信</button>
     <button class="btn" id="radioFeedBtn">🍎 エサ</button>
+    <button class="btn" id="radioHistBtn">📜 履歴</button>
   `
   root.appendChild(chatDock)
 
@@ -1946,13 +2004,44 @@ export function buildRadio(root: Root, game: GameState) {
     if (!msg) return
     socket.emit('chat', msg)
     showChatBubble(youWrapper, msg)
+    addRadioChatLog(currentPet.name + ' (you)', msg)
     chatInput.value = ''
   }
+
+  function openRadioChatHistory() {
+    const existing = root.querySelector('#radioChatHistOverlay')
+    if (existing) { existing.remove(); return }
+    const overlay = el('div')
+    overlay.id = 'radioChatHistOverlay'
+    overlay.style.cssText = 'position:absolute; inset:0; background:rgba(0,0,0,0.5); display:grid; place-items:center; z-index:100;'
+    const panel = el('div')
+    panel.style.cssText = 'width:420px; max-height:60vh; display:flex; flex-direction:column; background:#1a0e28; border:2px solid #8844aa; border-radius:16px; padding:16px; gap:8px; color:#fff;'
+    const rows = radioChatHistory.length === 0
+      ? '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px;">チャット履歴はありません</div>'
+      : radioChatHistory.map(c => `<div style="display:flex;gap:8px;align-items:baseline;font-size:13px;border-bottom:1px solid #3a2a4a;padding:5px 0;">
+          <span style="font-size:10px;color:#aaa;white-space:nowrap;">${esc(c.time)}</span>
+          <span style="font-weight:700;white-space:nowrap;color:#ff88cc;">${esc(c.name)}</span>
+          <span style="word-break:break-all;">${esc(c.message)}</span>
+        </div>`).join('')
+    panel.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <b style="font-size:15px;color:#ff88cc;">📜 チャット履歴（最大15件）</b>
+        <button class="btn" id="radioHistClose" style="background:#2a1428;border-color:#8844aa;color:#fff;">✕</button>
+      </div>
+      <div style="overflow-y:auto;flex:1;">${rows}</div>
+    `
+    panel.querySelector('#radioHistClose')!.addEventListener('click', () => overlay.remove())
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove() })
+    overlay.appendChild(panel)
+    root.appendChild(overlay)
+  }
+
   chatInput.addEventListener('keydown', e => { e.stopPropagation(); if (e.key==='Enter') sendChat() })
   chatDock.querySelector('#chatSend')!.addEventListener('click', sendChat)
   chatDock.querySelector<HTMLElement>('#radioFeedBtn')!.addEventListener('click', () => {
     openFoodMenuModal(root, game, (foodItemId, emoji) => { placeRadioFood(foodItemId, emoji) })
   })
+  chatDock.querySelector<HTMLElement>('#radioHistBtn')!.addEventListener('click', openRadioChatHistory)
 
   addBoardObject(root, 'radio', game.playerId)
 
