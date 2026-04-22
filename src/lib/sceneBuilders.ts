@@ -314,6 +314,9 @@ export function buildRoom(root: Root, game: GameState, _showScene: (k: string) =
     const rect = room.getBoundingClientRect()
     petX = Math.max(2, Math.min(97, (e.clientX - rect.left) / rect.width * 100))
     petY = Math.max(8, Math.min(94, (e.clientY - rect.top) / rect.height * 100))
+    petWrap.style.left = petX + '%'
+    petWrap.style.top = petY + '%'
+    petWrap.style.transform = `translate(-50%, -50%) scaleX(${petFacing})`
   })
   window.addEventListener('mouseup', () => {
     if (!petDragging) return
@@ -787,6 +790,7 @@ export function buildPark(root: Root, game: GameState) {
     const rect = petLayer.getBoundingClientRect()
     youWander.x = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
     youWander.y = Math.max(0, Math.min(rect.height, e.clientY - rect.top))
+    setPetPos(youWrapper, youWander.x, youWander.y, 0)
   })
   window.addEventListener('mouseup', () => {
     if (!youDragging) return
@@ -926,27 +930,29 @@ export function buildPark(root: Root, game: GameState) {
       return { fx: f.xPct / 100 * lw, fy: f.yPct / 100 * lh }
     }
 
-    // 自分 — 空腹なら餌を追う
+    // 自分 — ドラッグ中は自律移動しない
     const isYouHungry = game.pet.hun < 1.0
     let youBob = 0
-    if (isYouHungry && floorFoods.length > 0) {
-      const nearest = floorFoods.reduce((a, b) => {
-        const {fx:ax,fy:ay} = foodPx(a); const {fx:bx,fy:by} = foodPx(b)
-        return (ax-youWander.x)**2+(ay-youWander.y)**2 < (bx-youWander.x)**2+(by-youWander.y)**2 ? a : b
-      })
-      const {fx, fy} = foodPx(nearest)
-      const dx = fx - youWander.x, dy = fy - youWander.y
-      const dist = Math.sqrt(dx*dx + dy*dy)
-      if (dist < 30) {
-        eatFood(nearest, '', true)
+    if (!youDragging) {
+      if (isYouHungry && floorFoods.length > 0) {
+        const nearest = floorFoods.reduce((a, b) => {
+          const {fx:ax,fy:ay} = foodPx(a); const {fx:bx,fy:by} = foodPx(b)
+          return (ax-youWander.x)**2+(ay-youWander.y)**2 < (bx-youWander.x)**2+(by-youWander.y)**2 ? a : b
+        })
+        const {fx, fy} = foodPx(nearest)
+        const dx = fx - youWander.x, dy = fy - youWander.y
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        if (dist < 30) {
+          eatFood(nearest, '', true)
+        } else {
+          youWander.x += (dx/dist) * 1.5
+          youWander.y += (dy/dist) * 0.75
+          youWander.facing = dx > 0 ? 1 : -1
+        }
+        youBob = Math.abs(Math.sin(now/280)) * 5
       } else {
-        youWander.x += (dx/dist) * 1.5
-        youWander.y += (dy/dist) * 0.75
-        youWander.facing = dx > 0 ? 1 : -1
+        youBob = stepWander(youWander, now)
       }
-      youBob = Math.abs(Math.sin(now/280)) * 5
-    } else {
-      youBob = stepWander(youWander, now)
     }
     setFacing(youWrapper, youWander.facing)
     setPetPos(youWrapper, youWander.x, youWander.y, youBob)
@@ -1697,6 +1703,7 @@ export function buildRadio(root: Root, game: GameState) {
     const rect = petLayer.getBoundingClientRect()
     youWander.x = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
     youWander.y = Math.max(0, Math.min(rect.height, e.clientY - rect.top))
+    setPetPos(youWrapper, youWander.x, youWander.y, 0)
   })
   window.addEventListener('mouseup', () => {
     if (!youDraggingR) return
@@ -1863,26 +1870,29 @@ export function buildRadio(root: Root, game: GameState) {
       return { fx: f.xPct / 100 * lw, fy: f.yPct / 100 * lh }
     }
 
+    // ドラッグ中は自律移動しない
     const isYouHungry = game.pet.hun < 1.0
     let youBob = 0
-    if (isYouHungry && floorFoodsR.length > 0) {
-      const nearest = floorFoodsR.reduce((a, b) => {
-        const {fx:ax,fy:ay} = foodPxR(a); const {fx:bx,fy:by} = foodPxR(b)
-        return (ax-youWander.x)**2+(ay-youWander.y)**2 < (bx-youWander.x)**2+(by-youWander.y)**2 ? a : b
-      })
-      const {fx, fy} = foodPxR(nearest)
-      const dx = fx - youWander.x, dy = fy - youWander.y
-      const dist = Math.sqrt(dx*dx + dy*dy)
-      if (dist < 30) {
-        eatRadioFood(nearest, '', true)
+    if (!youDraggingR) {
+      if (isYouHungry && floorFoodsR.length > 0) {
+        const nearest = floorFoodsR.reduce((a, b) => {
+          const {fx:ax,fy:ay} = foodPxR(a); const {fx:bx,fy:by} = foodPxR(b)
+          return (ax-youWander.x)**2+(ay-youWander.y)**2 < (bx-youWander.x)**2+(by-youWander.y)**2 ? a : b
+        })
+        const {fx, fy} = foodPxR(nearest)
+        const dx = fx - youWander.x, dy = fy - youWander.y
+        const dist = Math.sqrt(dx*dx + dy*dy)
+        if (dist < 30) {
+          eatRadioFood(nearest, '', true)
+        } else {
+          youWander.x += (dx/dist) * 1.5
+          youWander.y += (dy/dist) * 0.75
+          youWander.facing = dx > 0 ? 1 : -1
+        }
+        youBob = Math.abs(Math.sin(now/280)) * 5
       } else {
-        youWander.x += (dx/dist) * 1.5
-        youWander.y += (dy/dist) * 0.75
-        youWander.facing = dx > 0 ? 1 : -1
+        youBob = stepWander(youWander, now)
       }
-      youBob = Math.abs(Math.sin(now/280)) * 5
-    } else {
-      youBob = stepWander(youWander, now)
     }
     setFacing(youWrapper, youWander.facing)
     setPetPos(youWrapper, youWander.x, youWander.y, youBob)
