@@ -788,8 +788,9 @@ export function buildPark(root: Root, game: GameState) {
   window.addEventListener('mousemove', (e) => {
     if (!youDragging) return
     const rect = petLayer.getBoundingClientRect()
-    youWander.x = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
-    youWander.y = Math.max(0, Math.min(rect.height, e.clientY - rect.top))
+    const scale = rect.width / (petLayer.offsetWidth || rect.width)
+    youWander.x = Math.max(0, Math.min(petLayer.offsetWidth, (e.clientX - rect.left) / scale))
+    youWander.y = Math.max(0, Math.min(petLayer.offsetHeight, (e.clientY - rect.top) / scale))
     setPetPos(youWrapper, youWander.x, youWander.y, 0)
   })
   window.addEventListener('mouseup', () => {
@@ -1701,8 +1702,9 @@ export function buildRadio(root: Root, game: GameState) {
   window.addEventListener('mousemove', (e) => {
     if (!youDraggingR) return
     const rect = petLayer.getBoundingClientRect()
-    youWander.x = Math.max(0, Math.min(rect.width, e.clientX - rect.left))
-    youWander.y = Math.max(0, Math.min(rect.height, e.clientY - rect.top))
+    const scale = rect.width / (petLayer.offsetWidth || rect.width)
+    youWander.x = Math.max(0, Math.min(petLayer.offsetWidth, (e.clientX - rect.left) / scale))
+    youWander.y = Math.max(0, Math.min(petLayer.offsetHeight, (e.clientY - rect.top) / scale))
     setPetPos(youWrapper, youWander.x, youWander.y, 0)
   })
   window.addEventListener('mouseup', () => {
