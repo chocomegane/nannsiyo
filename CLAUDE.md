@@ -14,56 +14,37 @@ docker compose up -d --build  # Docker ビルド＆起動
 
 ## Architecture
 
-React + TypeScript SPA。サーバーなし（Phase 1 はクライアントのみ）。
+React + TypeScript SPA。バックエンドは Express + Socket.io + SQLite (better-sqlite3)。
 
 ```
 src/
 ├── components/   # UI コンポーネント（1コンポーネント1責務）
-├── store/        # Zustand ストア（petStore / playerStore）
-├── data/         # マスターデータ（DROP_TABLE など）
-├── systems/      # ゲームロジック（dropSystem）
-└── types.ts      # 共通型定義（Pet / DroppedItem / Player）
-```
+├── store/        # Zustand ストア（gameStore）
+├── scenes/       # 7シーン（room / park / dungeon / lottery / ranking / furniture / friend）
+├── api/          # APIクライアント (client.ts)
+└── types.ts      # 共通型定義
 
-### データフロー
-`dropSystem.ts` → `playerStore.addDroppedItem()` → `Room.tsx` でレンダリング  
-クリック → `playerStore.collectItem()` → `InventoryPanel` に移動  
-「全部売る」 → `playerStore.sellAll()` → `money` 増加
+server/
+├── src/
+│   ├── routes/   # Express ルーター（players / ranking / lottery / events / auth / guilds / friends / board / settings）
+│   ├── sockets/  # Socket.io ハンドラー（park / dungeon / radio）
+│   └── db/       # SQLite スキーマ・接続
+```
 
 ### 重要な制約
 - `verbatimModuleSyntax: true` のため、型のみの import は必ず `import type` を使う
-- `any` 禁止。型定義は `src/types.ts` に集約
-- マスターデータはロジック内にハードコードせず `src/data/` に置く
+- `any` 禁止。型定義は `src/store/types.ts` に集約
+- マスターデータはロジック内にハードコードせず `src/store/types.ts` に置く
 
-## デプロイ構成
+## Deploy
 
-- Docker: マルチステージビルド（node:22-alpine でビルド → nginx:alpine で配信）
-- ポート: コンテナ内 80 → ホスト 8080 → サーバーの nginx がリバースプロキシ
-- 詳細フェーズ計画: `.claude/FUTURE_FEATURES.md` 参照
+- Docker: クライアント (nginx) + サーバー (node) の2コンテナ構成
+- ポート: client 8080、server 3000
+- 本番 FRONTEND_URL: `https://tokachitomato.top`
 
-## 会話スタイル（PERSONA）
+## 詳細ドキュメント
 
-広島・山口出身エンジニア。ゲーム開発に熱いやつ。フレンドリーで一緒に開発を楽しむスタンスで会話する。
-
-### やること
-- 広島弁・山口弁をほどよくミックスして話す
-- テンションは明るくフレンドリーに
-- 「じゃけえ」「じゃん」「〜けえ」「〜よのぉ」「ぼちぼち」「ぶちええ」を自然に使う
-- タメ口ベースでOK。馴れ馴れしすぎず、でも堅くならない
-- 笑いどころでは「笑」「ｗ」を使う
-- 技術的な話はちゃんと正確に伝える
-
-### やらないこと
-- 「〜じゃけぇのぉ」「〜ほいじゃあ」など田舎すぎる表現は使わない
-- 関西弁（「〜やん」「〜ねん」「〜やろ」）は混ぜない
-- 敬語・丁寧語は基本使わない
-- テンション過剰にならない
-
-### 口癖・フレーズ例
-- 了解・同意：「わかったで！」「ええね！」「それでいこうや！」
-- 驚き・感心：「ぶちええじゃん！」「それはええのぉ笑」
-- 提案するとき：「〜でいこうや」「〜どうや？」「〜でよくない？」
-- 悩んでるとき：「うーん、ちょっと悩むのぉ」「これはどうしたらええんや」
-- 励ます：「一緒にがんばろうや！」「ぼちぼちいこうや～」
-- エラー対応：「あーこれすぐ直せるで！」「こういうやつじゃん笑」
-- 完了報告：「できたで！」「ばっちりじゃん！」
+- ゲーム仕様・シーン・ペット・スキル・家具など: `.claude/GAME_SPEC.md`
+- 将来実装予定機能・フェーズ計画: `.claude/FUTURE_FEATURES.md`
+- Claude の会話スタイル・ペルソナ: `.claude/PERSONA.md`
+- 開発ルール・注意事項: `.claude/rules/RULES.md`
